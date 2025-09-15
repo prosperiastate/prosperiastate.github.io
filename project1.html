@@ -102,11 +102,6 @@
           attribution: 'Map data © Google'
       });
 
-      // Humboldt 40ft
-      var lyr2 = L.tileLayer(
-        'https://pub-256928d690cc446c84032baa7343824c.r2.dev/Project_1_Bridge_Crack/Humboldt_40ft/{z}/{x}/{y}.png',
-        {tms: 1, attribution: "", minZoom: 17, maxZoom: 26}
-      );
 
       // Humboldt 15ft
       var lyr = L.tileLayer(
@@ -114,6 +109,13 @@
         {tms: 1, attribution: "", minZoom: 17, maxZoom: 26}
       );
       var bounds1 = [[42.8588797, -94.2271783], [42.8593420, -94.2273665]];
+
+      // Humboldt 40ft
+      var lyr2 = L.tileLayer(
+        'https://pub-256928d690cc446c84032baa7343824c.r2.dev/Project_1_Bridge_Crack/Humboldt_40ft/{z}/{x}/{y}.png',
+        {tms: 1, attribution: "", minZoom: 17, maxZoom: 26}
+      );
+
 
       // NEMM part1 15ft
       var lyr3 = L.tileLayer(
@@ -145,13 +147,14 @@
       // Layers control
       var basemaps = { "CartoDB Positron": cartodb, "Google": googleSat, "Without background": white };
       var overlaymaps = { 
-        "Humboldt (40ft)": lyr2,
         "Humboldt (15ft)": lyr,
+        "Humboldt (40ft)": lyr2,
         "NEMM (15ft) Part 1": lyr3,
         "NEMM (15ft) Part 2": lyr4,
         "NEMM (15ft) Part 3": lyr5
       };
-      L.control.layers(basemaps, overlaymaps, {collapsed: false}).addTo(map);
+      lyr.addTo(map);
+      L.control.layers(basemaps, overlaymaps, {collapsed: true}).addTo(map);
 
       // Fit bounds when overlay added
       map.on('overlayadd', function(e) {

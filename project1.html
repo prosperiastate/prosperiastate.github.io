@@ -11,7 +11,10 @@
 
     <style>
       body { margin:0; padding:0; }
-      body, table, tr, td, th, div, h1, h2, input { font-family: "Calibri", "Trebuchet MS", "Ubuntu", Serif; font-size: 11pt; }
+      body, table, tr, td, th, div, h1, h2, input {
+        font-family: "Calibri", "Trebuchet MS", "Ubuntu", Serif;
+        font-size: 11pt;
+      }
 
       /* Full-width top title bar */
       #topTitle {
@@ -22,12 +25,38 @@
         height: 50px;
         background-color: #C8102E;
         color: white;
-        text-align: center;
-        line-height: 50px;
-        font-size: 20pt;
+        display: flex;               /* use flexbox */
+        align-items: center;         /* vertical center */
+        justify-content: center;     /* center content */
+        font-size: 18pt;
         font-weight: bold;
         z-index: 1000;
         box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        padding: 0 10px;
+        overflow: hidden;
+        text-align: center;
+      }
+
+      #topTitle a {
+        color: white;
+        text-decoration: none;
+        font-weight: bold;
+        margin-right: 20px;
+        flex-shrink: 0;
+        white-space: nowrap;
+      }
+
+      #topTitle span.titleText {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;   /* show "..." if too long */
+        flex-shrink: 1;
+      }
+
+      @media (max-width: 400px) {
+        #topTitle {
+          font-size: 14pt;
+        }
       }
 
       /* Map fills remaining space below title */
@@ -48,9 +77,9 @@
 
     <!-- Full-width top title -->
     <div id="topTitle">
-  <a href="https://prosperiastate.github.io/" style="color:white; text-decoration:none; font-weight:bold; margin-right:50px;">Home</a>
-  Project 1: Bridge Crack Inspection
-</div>
+      <a href="https://prosperiastate.github.io/">Home</a>
+      <span class="titleText">Project 1: Bridge Crack Inspection</span>
+    </div>
 
     <!-- Map -->
     <div id="map"></div>
@@ -62,22 +91,16 @@
         minZoom: 17, maxZoom: 26
       });
 
-
       var white = L.tileLayer(
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEAAQMAAABmvDolAAAAA1BMVEX///+nxBvIAAAAH0lEQVQYGe3BAQ0AAADCIPunfg43YAAAAAAAAAAA5wIhAAAB9aK9BAAAAABJRU5ErkJggg==",
         {minZoom: 17, maxZoom: 26}
       );
 
-
-      var googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {maxZoom: 26,
+      var googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+          maxZoom: 26,
           subdomains:['mt0','mt1','mt2','mt3'],
           attribution: 'Map data © Google'
-        }
-      );
-
-
-
-
+      });
 
       // Humboldt 40ft
       var lyr2 = L.tileLayer(
@@ -103,13 +126,10 @@
         {tms: 1, attribution: "", minZoom: 17, maxZoom: 26}
       );
 
-
       var lyr5 = L.tileLayer(
         'https://pub-256928d690cc446c84032baa7343824c.r2.dev/Project_1_Bridge_Crack/NEMM_part3_15ft/{z}/{x}/{y}.png',
         {tms: 1, attribution: "", minZoom: 17, maxZoom: 26}
       );
-
-
 
       var bounds3 = [[41.6502, -93.5792], [41.6507, -93.5797]];
 

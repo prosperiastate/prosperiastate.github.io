@@ -86,10 +86,7 @@
 
     <script>
       // Base layers
-      var cartodb = L.tileLayer('http://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="http://cartodb.com/attributions">CartoDB</a>',
-        minZoom: 17, maxZoom: 26
-      });
+      var osm = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors', minZoom: 17, maxZoom: 26});
 
       var white = L.tileLayer(
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEAAQMAAABmvDolAAAAA1BMVEX///+nxBvIAAAAH0lEQVQYGe3BAQ0AAADCIPunfg43YAAAAAAAAAAA5wIhAAAB9aK9BAAAAABJRU5ErkJggg==",
@@ -102,37 +99,22 @@
           attribution: 'Map data © Google'
       });
 
-
-      // Humboldt 15ft
-      var lyr = L.tileLayer(
-        'https://pub-256928d690cc446c84032baa7343824c.r2.dev/Project_1_Bridge_Crack/Humboldt_15ft/{z}/{x}/{y}.png',
-        {tms: 1, attribution: "", minZoom: 17, maxZoom: 26}
-      );
+      // Overlays
+      var lyr  = L.tileLayer('https://pub-256928d690cc446c84032baa7343824c.r2.dev/Project_1_Bridge_Crack/Humboldt_15ft/{z}/{x}/{y}.png',
+        {tms: 1, attribution: "", minZoom: 17, maxZoom: 26});
       var bounds1 = [[42.8588797, -94.2271783], [42.8593420, -94.2273665]];
 
-      // Humboldt 40ft
-      var lyr2 = L.tileLayer(
-        'https://pub-256928d690cc446c84032baa7343824c.r2.dev/Project_1_Bridge_Crack/Humboldt_40ft/{z}/{x}/{y}.png',
-        {tms: 1, attribution: "", minZoom: 17, maxZoom: 26}
-      );
+      var lyr2 = L.tileLayer('https://pub-256928d690cc446c84032baa7343824c.r2.dev/Project_1_Bridge_Crack/Humboldt_40ft/{z}/{x}/{y}.png',
+        {tms: 1, attribution: "", minZoom: 17, maxZoom: 26});
 
+      var lyr3 = L.tileLayer('https://pub-256928d690cc446c84032baa7343824c.r2.dev/Project_1_Bridge_Crack/NEMM_part1_15ft/{z}/{x}/{y}.png',
+        {tms: 1, attribution: "", minZoom: 17, maxZoom: 26});
 
-      // NEMM part1 15ft
-      var lyr3 = L.tileLayer(
-        'https://pub-256928d690cc446c84032baa7343824c.r2.dev/Project_1_Bridge_Crack/NEMM_part1_15ft/{z}/{x}/{y}.png',
-        {tms: 1, attribution: "", minZoom: 17, maxZoom: 26}
-      );
+      var lyr4 = L.tileLayer('https://pub-256928d690cc446c84032baa7343824c.r2.dev/Project_1_Bridge_Crack/NEMM_part2_15ft/{z}/{x}/{y}.png',
+        {tms: 1, attribution: "", minZoom: 17, maxZoom: 26});
 
-      var lyr4 = L.tileLayer(
-        'https://pub-256928d690cc446c84032baa7343824c.r2.dev/Project_1_Bridge_Crack/NEMM_part2_15ft/{z}/{x}/{y}.png',
-        {tms: 1, attribution: "", minZoom: 17, maxZoom: 26}
-      );
-
-      var lyr5 = L.tileLayer(
-        'https://pub-256928d690cc446c84032baa7343824c.r2.dev/Project_1_Bridge_Crack/NEMM_part3_15ft/{z}/{x}/{y}.png',
-        {tms: 1, attribution: "", minZoom: 17, maxZoom: 26}
-      );
-
+      var lyr5 = L.tileLayer('https://pub-256928d690cc446c84032baa7343824c.r2.dev/Project_1_Bridge_Crack/NEMM_part3_15ft/{z}/{x}/{y}.png',
+        {tms: 1, attribution: "", minZoom: 17, maxZoom: 26});
       var bounds3 = [[41.6502, -93.5792], [41.6507, -93.5797]];
 
       // Initialize map
@@ -141,11 +123,15 @@
         zoom: 17,
         minZoom: 17,
         maxZoom: 26,
-        layers: [cartodb]
+        layers: [osm, lyr]
       });
 
       // Layers control
-      var basemaps = { "CartoDB Positron": cartodb, "Google": googleSat, "Without background": white };
+      var basemaps = { 
+        "Open Street Map": osm, 
+        "Google": googleSat, 
+        "Without background": white 
+      };
       var overlaymaps = { 
         "Humboldt (15ft)": lyr,
         "Humboldt (40ft)": lyr2,
@@ -153,16 +139,27 @@
         "NEMM (15ft) Part 2": lyr4,
         "NEMM (15ft) Part 3": lyr5
       };
-      lyr.addTo(map);
       L.control.layers(basemaps, overlaymaps, {collapsed: true}).addTo(map);
 
-      // Fit bounds when overlay added
+      // Bounds mapping
+      var overlayBounds = {
+        [lyr._leaflet_id]: bounds1,
+        [lyr2._leaflet_id]: bounds1,
+        [lyr3._leaflet_id]: bounds3,
+        [lyr4._leaflet_id]: bounds3,
+        [lyr5._leaflet_id]: bounds3
+      };
+
+      // Track current bounds
+      var currentBounds = bounds1;
+
+      // Fit bounds only when switching to a new bounding box
       map.on('overlayadd', function(e) {
-        if (e.layer === lyr2) map.fitBounds(bounds1);
-        if (e.layer === lyr) map.fitBounds(bounds1);
-        if (e.layer === lyr3) map.fitBounds(bounds3);
-        if (e.layer === lyr4) map.fitBounds(bounds3);
-        if (e.layer === lyr5) map.fitBounds(bounds3);
+        var newBounds = overlayBounds[e.layer._leaflet_id];
+        if (newBounds && newBounds !== currentBounds) {
+          map.fitBounds(newBounds);
+          currentBounds = newBounds;
+        }
       });
 
       // Bottom-left note
@@ -181,6 +178,5 @@
       // Initial fit
       map.fitBounds(bounds1);
     </script>
-
   </body>
 </html>

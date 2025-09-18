@@ -107,6 +107,7 @@
     // Overlay Layers
     // ==========================
     // 150 street
+    var Astro_RGB = L.tileLayer('https://pub-256928d690cc446c84032baa7343824c.r2.dev/Project_5_ES_Control/Astro_RGB/{z}/{x}/{y}.png', {tms:1, minZoom:15, maxZoom:26});
     var Astro_200_hill = L.tileLayer('https://pub-256928d690cc446c84032baa7343824c.r2.dev/Project_5_ES_Control/Mediapolis_Astro_200_Hillshade/{z}/{x}/{y}.png', {tms:1, minZoom:15, maxZoom:26});
     var M3M_hillshade = L.tileLayer('https://pub-256928d690cc446c84032baa7343824c.r2.dev/Project_5_ES_Control/Mediapolis_M3M_Hillshade/{z}/{x}/{y}.png', {tms:1, minZoom:15, maxZoom:26});
     var M3M_RGB = L.tileLayer('https://pub-256928d690cc446c84032baa7343824c.r2.dev/Project_5_ES_Control/Mediapolis_M3M_RGB/{z}/{x}/{y}.png', {tms:1, minZoom:15, maxZoom:26});
@@ -115,6 +116,7 @@
 
 
     var overlaymaps = {
+      "Astro RGB (200ft)":Astro_RGB,
       "Astro Hillshade (200ft)": Astro_200_hill,
       "M3M Hillshade (100ft)": M3M_hillshade,
       "M3M RGB (100ft)": M3M_RGB,
@@ -128,7 +130,7 @@
       zoom: 16,
       minZoom: 15,
       maxZoom: 26,
-      layers: [osm, M3M_RGB] // Default base + overlay
+      layers: [osm, Astro_RGB] // Default base + overlay
     });
 
     L.control.layers(basemaps, overlaymaps, {collapsed:true}).addTo(map);

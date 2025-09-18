@@ -126,6 +126,8 @@
         layers: [osm, lyr]
       });
 
+
+
       // Layers control
       var basemaps = { 
         "Open Street Map": osm, 
@@ -140,6 +142,7 @@
         "NEMM (15ft) Part 3": lyr5
       };
       L.control.layers(basemaps, overlaymaps, {collapsed: true}).addTo(map);
+      L.control.scale({position: 'bottomleft'}).addTo(map);
 
       // Bounds mapping
       var overlayBounds = {

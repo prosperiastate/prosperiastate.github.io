@@ -139,6 +139,7 @@
     });
 
     L.control.layers(basemaps, overlaymaps, {collapsed:true}).addTo(map);
+    L.control.scale({position: 'bottomleft'}).addTo(map);
 
     // ==========================
     // Fit Bounds Logic
@@ -161,6 +162,7 @@
         currentBounds = newBounds;
       }
     });
+
 
     // ==========================
     // Bottom-left note

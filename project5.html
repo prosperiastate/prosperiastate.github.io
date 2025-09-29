@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' />
-  <title>Project 5: E&S Control Measures<</title>
+  <title>Project 5: E&S Control Measures</title>
 
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@0.7.5/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@0.7.5/dist/leaflet.js"></script>
+  <!-- Leaflet (latest stable version) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
     body { margin:0; padding:0; }
@@ -84,7 +84,10 @@
     // ==========================
     // Base Layers
     // ==========================
-    var osm = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors', minZoom: 15, maxZoom: 26});
+    var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors',
+      minZoom: 15, maxZoom: 26
+    });
 
     var white = L.tileLayer(
       "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEAAQMAAABmvDolAAAAA1BMVEX///+nxBvIAAAAH0lEQVQYGe3BAQ0AAADCIPunfg43YAAAAAAAAAAA5wIhAAAB9aK9BAAAAABJRU5ErkJggg==",
@@ -113,10 +116,6 @@
     var O_M3M_RGB = L.tileLayer('https://pub-256928d690cc446c84032baa7343824c.r2.dev/Oskaloosa/09232025_M3M_RGB/{z}/{x}/{y}.png', {tms:1, minZoom:15, maxZoom:26});
     var O_M3M_hillshade = L.tileLayer('https://pub-256928d690cc446c84032baa7343824c.r2.dev/Oskaloosa/09232025_M3M_Hillshade/{z}/{x}/{y}.png', {tms:1, minZoom:15, maxZoom:26});
 
-    
-
-    
-
     // Mediapolis Site
     var M_Astro_RGB = L.tileLayer('https://pub-256928d690cc446c84032baa7343824c.r2.dev/Project_5_ES_Control/Astro_RGB/{z}/{x}/{y}.png', {tms:1, minZoom:15, maxZoom:26});
     var M_Astro_200_hill = L.tileLayer('https://pub-256928d690cc446c84032baa7343824c.r2.dev/Project_5_ES_Control/Mediapolis_Astro_200_Hillshade/{z}/{x}/{y}.png', {tms:1, minZoom:15, maxZoom:26});
@@ -126,17 +125,15 @@
     var Oskaloosa = [[41.31431661788831, -92.69546283193613], [41.32309960313015, -92.70509917449256]];
     var Mediapolis = [[41.05990767861677, -91.1730412667772], [41.06841449838643, -91.17951486053154]];
 
-    
     var overlaymaps = {
       "Oskaloosa_Astro RGB 0.67 cm" : O_Astro_RGB,
       "Oskaloosa_Astro Hillshade 2.7 cm" : O_Astro_hillshade,
       "Oskaloosa_M3M RGB 1.6 cm" : O_M3M_RGB,
-      "Oskaloosa_M3M Hillshade 6.3 cm" : O_M3M_hillshade.,
-      "Media_Astro RGB 0.68 cm":M_Astro_RGB,
+      "Oskaloosa_M3M Hillshade 6.3 cm" : O_M3M_hillshade,
+      "Media_Astro RGB 0.68 cm": M_Astro_RGB,
       "Media_Astro Hillshade 1.35 cm": M_Astro_200_hill,
       "Media_M3M Hillshade 1.67 cm": M_M3M_hillshade,
       "Media_M3M RGB 0.83 cm": M_M3M_RGB
-
     };
 
     // ==========================
@@ -152,7 +149,6 @@
 
     L.control.layers(basemaps, overlaymaps, {collapsed:true}).addTo(map);
     L.control.scale({position: 'bottomleft'}).addTo(map);
-
 
     // ==========================
     // Fit Bounds Logic
@@ -177,7 +173,6 @@
         currentBounds = newBounds;
       }
     });
-
 
     // ==========================
     // Bottom-left note

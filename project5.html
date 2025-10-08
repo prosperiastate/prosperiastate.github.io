@@ -147,8 +147,35 @@
       layers: [osm, O_Astro_RGB] // Default base + overlay
     });
 
-    L.control.layers(basemaps, overlaymaps, {collapsed:true}).addTo(map);
+    // Create toggle button at TOP-LEFT
+    var toggleButton = L.control({position: 'topright'});
+    toggleButton.onAdd = function(map) {
+      var div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+      var link = L.DomUtil.create('a', '', div);
+      link.innerHTML = '_';  // menu icon
+      link.href = '#';
+      link.title = 'Toggle layer list';
+
+      L.DomEvent.on(link, 'click', function(e) {
+        L.DomEvent.stop(e);
+        var control = document.querySelector('.leaflet-control-layers');
+        if (control.style.display === 'none') {
+          control.style.display = 'block';
+        } else {
+          control.style.display = 'none';
+        }
+      });
+
+      return div;
+    };
+    toggleButton.addTo(map);
+
+    L.control.layers(basemaps, overlaymaps, {collapsed:false}).addTo(map);
     L.control.scale({position: 'bottomleft'}).addTo(map);
+
+
+
+
 
     // ==========================
     // Fit Bounds Logic

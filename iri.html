@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Iowa IRI Map</title>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+html, body {
+    height:100%;
+    margin:0;
+}
+
+#map {
+    width:100%;
+    height:100%;
+}
+
+.legend {
+    background:white;
+    padding:10px;
+    line-height:20px;
+    font-family:Arial;
+    box-shadow:0 0 10px rgba(0,0,0,0.3);
+}
+
+.legend i {
+    width:18px;
+    height:18px;
+    float:left;
+    margin-right:8px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="map"></div>
+
+<script>
+
+var map = L.map('map').setView([42.0,-93.5],7);
+
+L.tileLayer(
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+{
+    maxZoom:19
+}
+).addTo(map);
+
+
+function getColor(cls){
+
+    return {
+        "Excellent":"#2E7D32",
+        "Good":"#8BC34A",
+        "Fair":"#FFFF00",
+        "Acceptable":"#FF9800",
+        "Bad":"#D32F2F"
+    }[cls] || "#000000";
+}
+
+
+fetch("./iri.geojson")
+.then(response => {
+
+    if(!response.ok){
+        throw new Error("GeoJSON not found");
+    }
+
+    return response.json();
+
+})
+.then(data => {
+
+    console.log(data);
+
+    var layer = L.geoJSON(data, {
+
+        style: function(feature){
+
+            return {
+                color: getColor(feature.properties.iri_class),
+                weight:4
+            };
+
+        },
+
+        onEachFeature: function(feature, layer){
+
+            layer.bindPopup(
+                "<b>Road:</b> " + feature.properties.road_id +
+                "<br><b>IRI:</b> " +
+                feature.properties.iri_in_mi +
+                " in/mile" +
+                "<br><b>Class:</b> " +
+                feature.properties.iri_class
+            );
+
+        }
+
+    }).addTo(map);
+
+    map.fitBounds(layer.getBounds());
+
+})
+.catch(error => {
+
+    console.error(error);
+    alert(error);
+
+});
+
+
+// Legend
+var legend = L.control({position:'bottomleft'});
+
+legend.onAdd = function(){
+
+    var div = L.DomUtil.create('div','legend');
+
+    div.innerHTML =
+    '<b>IRI (in/mile)</b><br>' +
+    '<i style="background:#2E7D32"></i> Excellent (<85)<br>' +
+    '<i style="background:#8BC34A"></i> Good (85–105)<br>' +
+    '<i style="background:#FFFF00"></i> Fair (105–125)<br>' +
+    '<i style="background:#FF9800"></i> Acceptable (125–145)<br>' +
+    '<i style="background:#D32F2F"></i> Bad (>145)';
+
+    return div;
+};
+
+legend.addTo(map);
+
+</script>
+
+</body>
+</html>

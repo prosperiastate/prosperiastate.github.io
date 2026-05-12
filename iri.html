@@ -22,17 +22,19 @@ html, body {
 
 .legend {
     background:white;
-    padding:10px;
-    line-height:20px;
+    padding:14px;
+    line-height:24px;
     font-family:Arial;
-    box-shadow:0 0 10px rgba(0,0,0,0.3);
+    font-size:16px;
+    box-shadow:0 0 12px rgba(0,0,0,0.3);
+    border-radius:8px;
 }
 
 .legend i {
-    width:18px;
-    height:18px;
+    width:20px;
+    height:20px;
     float:left;
-    margin-right:8px;
+    margin-right:10px;
 }
 </style>
 </head>
@@ -43,7 +45,8 @@ html, body {
 
 <script>
 
-var map = L.map('map').setView([42.0,-93.5],7);
+// Initial Iowa zoom
+var map = L.map('map').setView([42.05, -93.5], 8);
 
 L.tileLayer(
 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -53,8 +56,8 @@ L.tileLayer(
 ).addTo(map);
 
 
+// Color scheme
 function getColor(cls){
-
     return {
         "Excellent":"#2E7D32",
         "Good":"#8BC34A",
@@ -65,7 +68,15 @@ function getColor(cls){
 }
 
 
-fetch("./iri.geojson")
+// Null-safe display
+function safe(val){
+    return (val === null || val === undefined || val === "")
+        ? "N/A"
+        : val;
+}
+
+
+fetch("./updated_iri.geojson")
 .then(response => {
 
     if(!response.ok){
@@ -82,30 +93,50 @@ fetch("./iri.geojson")
     var layer = L.geoJSON(data, {
 
         style: function(feature){
-
             return {
-                color: getColor(feature.properties.iri_class),
-                weight:4
+                color: feature.properties.color_hex ||
+                       getColor(feature.properties.iri_class),
+                weight: 7,
+                opacity: 0.9
             };
-
         },
 
         onEachFeature: function(feature, layer){
 
+            var p = feature.properties;
+
             layer.bindPopup(
-                "<b>Road:</b> " + feature.properties.road_id +
-                "<br><b>IRI:</b> " +
-                feature.properties.iri_in_mi +
-                " in/mile" +
-                "<br><b>Class:</b> " +
-                feature.properties.iri_class
+                "<b>Road Name:</b> " + safe(p.road_id) +
+                "<br><b>Segment IRI:</b> " + safe(p.seg_iri_in_mi) + " in/mile" +
+                "<br><b>Segment Length:</b> " + safe(p.seg_len_mi) + " mile" +
+                "<br><b>Whole IRI:</b> " + safe(p.whole_iri_in_mi) + " in/mile" +
+                "<br><b>Direction:</b> " + safe(p.direction) +
+                "<br><b>Surface:</b> " + safe(p.surface) +
+                "<br><b>Collection Date:</b> " + safe(p.collect_dt)
             );
+
+            // Hover effect
+            layer.on({
+                mouseover: function(e){
+                    e.target.setStyle({
+                        weight:10
+                    });
+                },
+                mouseout: function(e){
+                    layer.resetStyle
+                        ? layer.resetStyle(e.target)
+                        : e.target.setStyle({weight:7});
+                }
+            });
 
         }
 
     }).addTo(map);
 
-    map.fitBounds(layer.getBounds());
+    // Fit all Iowa data nicely
+    map.fitBounds(layer.getBounds(), {
+        padding:[40,40]
+    });
 
 })
 .catch(error => {
@@ -125,11 +156,11 @@ legend.onAdd = function(){
 
     div.innerHTML =
     '<b>IRI (in/mile)</b><br>' +
-    '<i style="background:#2E7D32"></i> Excellent (<85)<br>' +
+    '<i style="background:#2E7D32"></i> Excellent (&lt;85)<br>' +
     '<i style="background:#8BC34A"></i> Good (85–105)<br>' +
     '<i style="background:#FFFF00"></i> Fair (105–125)<br>' +
     '<i style="background:#FF9800"></i> Acceptable (125–145)<br>' +
-    '<i style="background:#D32F2F"></i> Bad (>145)';
+    '<i style="background:#D32F2F"></i> Bad (&gt;145)';
 
     return div;
 };

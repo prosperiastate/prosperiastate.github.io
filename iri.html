@@ -107,11 +107,10 @@ fetch("./iri.geojson")
 
             layer.bindPopup(
                 "<b>Road Name:</b> " + safe(p.road_id) +
-                "<br><b>Segment IRI:</b> " + safe(p.seg_iri_in_mi) + " in/mile" +
-                "<br><b>Segment Length:</b> " + safe(p.seg_len_mi) + " mile" +
+                "<b>Road Type:</b> " + safe(p.road_type) +
+                "<br><b>Segment IRI:</b> " + safe(p.iri_in_mi) + " in/mile" +
                 "<br><b>Whole IRI:</b> " + safe(p.whole_iri_in_mi) + " in/mile" +
                 "<br><b>Direction:</b> " + safe(p.direction) +
-                "<br><b>Surface:</b> " + safe(p.surface) +
                 "<br><b>Collection Date:</b> " + safe(p.collect_dt)
             );
 

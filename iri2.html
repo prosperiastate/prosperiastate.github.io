@@ -74,8 +74,8 @@ function getColor(cls){
 // ----------------------
 function getRoadColor(type){
     return {
-        "Primary":"#FF00FF",
-        "Secondary":"#00FFFF"
+        "Primary":"#E38CE3",
+        "Secondary":"#7FDBFF"
     }[type] || "#666666";
 }
 
@@ -110,7 +110,7 @@ fetch("./iri.geojson")
                 color: feature.properties.color_hex ||
                        getColor(feature.properties.iri_class),
                 weight: 7,
-                opacity: 0.9
+                opacity: 0.6
             };
         },
 

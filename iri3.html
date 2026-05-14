@@ -87,12 +87,23 @@ function safe(val){
         : val;
 }
 
-var iriLayer;
+
+// Get year from date
+function getYear(dateStr){
+    if(!dateStr) return null;
+    var d = new Date(dateStr);
+    if(isNaN(d)) return null;
+    return d.getFullYear();
+}
+
+var iriAllLayer;
+var iri2026Layer;
 var roadsLayer;
+var layerControl;
 
 
 // ========================================
-// Load IRI layer (unchanged)
+// Load IRI Layer (ALL + 2026 filter)
 // ========================================
 fetch("./iri.geojson")
 .then(response => {
@@ -103,43 +114,58 @@ fetch("./iri.geojson")
 })
 .then(data => {
 
-    iriLayer = L.geoJSON(data, {
+    function iriStyle(feature){
+        return {
+            color: feature.properties.color_hex ||
+                   getColor(feature.properties.iri_class),
+            weight: 7,
+            opacity: 0.9
+        };
+    }
 
-        style: function(feature){
-            return {
-                color: feature.properties.color_hex ||
-                       getColor(feature.properties.iri_class),
-                weight: 7,
-                opacity: 0.9
-            };
+    function onEachFeature(feature, layer){
+
+        var p = feature.properties;
+
+        layer.bindPopup(
+            "<b>Road Name:</b> " + safe(p.road_id) +
+            "<br><b>Road Type:</b> " + safe(p.road_type) +
+            "<br><b>Segment IRI:</b> " + safe(p.iri_in_mi) + " in/mile" +
+            "<br><b>Whole IRI:</b> " + safe(p.whole_iri_in_mi) + " in/mile" +
+            "<br><b>Direction:</b> " + safe(p.direction) +
+            "<br><b>Collection Date:</b> " + safe(p.collect_dt)
+        );
+
+        layer.on({
+            mouseover: function(e){
+                e.target.setStyle({weight:10});
+            },
+            mouseout: function(e){
+                iriAllLayer.resetStyle(e.target);
+            }
+        });
+    }
+
+    // ALL DATA LAYER
+    iriAllLayer = L.geoJSON(data, {
+        style: iriStyle,
+        onEachFeature: onEachFeature
+    });
+
+    // 2026+ FILTERED LAYER
+    iri2026Layer = L.geoJSON(data, {
+        filter: function(feature){
+            var year = getYear(feature.properties.collect_dt);
+            return year !== null && year >= 2026;
         },
+        style: iriStyle,
+        onEachFeature: onEachFeature
+    });
 
-        onEachFeature: function(feature, layer){
+    // Default view
+    iriAllLayer.addTo(map);
 
-            var p = feature.properties;
-
-            layer.bindPopup(
-                "<b>Road Name:</b> " + safe(p.road_id) +
-                "<br><b>Road Type:</b> " + safe(p.road_type) +
-                "<br><b>Segment IRI:</b> " + safe(p.iri_in_mi) + " in/mile" +
-                "<br><b>Whole IRI:</b> " + safe(p.whole_iri_in_mi) + " in/mile" +
-                "<br><b>Direction:</b> " + safe(p.direction) +
-                "<br><b>Collection Date:</b> " + safe(p.collect_dt)
-            );
-
-            layer.on({
-                mouseover: function(e){
-                    e.target.setStyle({weight:10});
-                },
-                mouseout: function(e){
-                    iriLayer.resetStyle(e.target);
-                }
-            });
-        }
-
-    }).addTo(map);
-
-    map.fitBounds(iriLayer.getBounds(), {
+    map.fitBounds(iriAllLayer.getBounds(), {
         padding:[40,40]
     });
 
@@ -152,7 +178,7 @@ fetch("./iri.geojson")
 
 
 // ========================================
-// Load County Roads Layer
+// County Roads Layer
 // ========================================
 fetch("./Clinton_roads.geojson")
 .then(response => {
@@ -206,8 +232,6 @@ fetch("./Clinton_roads.geojson")
 // ========================================
 // Layer Control
 // ========================================
-var layerControl;
-
 function updateLayerControl(){
 
     if(layerControl){
@@ -216,8 +240,17 @@ function updateLayerControl(){
 
     var overlays = {};
 
-    if(iriLayer) overlays["IRI Layer"] = iriLayer;
-    if(roadsLayer) overlays["County Roads Layer"] = roadsLayer;
+    if(iriAllLayer){
+        overlays["IRI Layer (All Data)"] = iriAllLayer;
+    }
+
+    if(iri2026Layer){
+        overlays["IRI Layer (2026+)"] = iri2026Layer;
+    }
+
+    if(roadsLayer){
+        overlays["County Roads Layer"] = roadsLayer;
+    }
 
     layerControl = L.control.layers(null, overlays).addTo(map);
 }

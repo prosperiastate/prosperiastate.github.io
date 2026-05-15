@@ -29,7 +29,6 @@ html, body {
     box-shadow:0 0 12px rgba(0,0,0,0.3);
     border-radius:8px;
 }
-
 .legend i {
     width:20px;
     height:20px;
@@ -56,7 +55,9 @@ L.tileLayer(
 ).addTo(map);
 
 
-// Color scheme
+// ----------------------
+// IRI Color scheme
+// ----------------------
 function getColor(cls){
     return {
         "Excellent":"#2E7D32",
@@ -68,6 +69,17 @@ function getColor(cls){
 }
 
 
+// ----------------------
+// Road Layer Colors
+// ----------------------
+function getRoadColor(type){
+    return {
+        "Primary":"#FF00FF",
+        "Secondary":"#00FFFF"
+    }[type] || "#666666";
+}
+
+
 // Null-safe display
 function safe(val){
     return (val === null || val === undefined || val === "")
@@ -76,28 +88,116 @@ function safe(val){
 }
 
 
+// Get year from date
+function getYear(dateStr){
+    if(!dateStr) return null;
+    var d = new Date(dateStr);
+    if(isNaN(d)) return null;
+    return d.getFullYear();
+}
+
+var iriAllLayer;
+var iri2026Layer;
+var roadsLayer;
+var layerControl;
+
+
+// ========================================
+// Load IRI Layer (ALL + 2026 filter)
+// ========================================
 fetch("./iri.geojson")
 .then(response => {
-
     if(!response.ok){
-        throw new Error("GeoJSON not found");
+        throw new Error("IRI GeoJSON not found");
     }
-
     return response.json();
-
 })
 .then(data => {
 
-    console.log(data);
+    function iriStyle(feature){
+        return {
+            color: feature.properties.color_hex ||
+                   getColor(feature.properties.iri_class),
+            weight: 7,
+            opacity: 0.9
+        };
+    }
 
-    var layer = L.geoJSON(data, {
+    function onEachFeature(feature, layer){
+
+        var p = feature.properties;
+
+        layer.bindPopup(
+            "<b>Road Name:</b> " + safe(p.road_id) +
+            "<br><b>Road Type:</b> " + safe(p.road_type) +
+            "<br><b>Segment IRI:</b> " + safe(p.iri_in_mi) + " in/mile" +
+            "<br><b>Whole IRI:</b> " + safe(p.whole_iri_in_mi) + " in/mile" +
+            "<br><b>Speed</b> " + safe(p.whole_speed_mph) + " mph" +
+            "<br><b>Direction:</b> " + safe(p.direction) +
+            "<br><b>Collection Date:</b> " + safe(p.collect_dt)
+        );
+
+        layer.on({
+            mouseover: function(e){
+                e.target.setStyle({weight:10});
+            },
+            mouseout: function(e){
+                if(iriAllLayer) iriAllLayer.resetStyle(e.target);
+            }
+        });
+    }
+
+    // ALL DATA LAYER
+    iriAllLayer = L.geoJSON(data, {
+        style: iriStyle,
+        onEachFeature: onEachFeature
+    });
+
+    // 2026+ FILTERED LAYER
+    iri2026Layer = L.geoJSON(data, {
+        filter: function(feature){
+            var year = getYear(feature.properties.collect_dt);
+            return year !== null && year >= 2026;
+        },
+        style: iriStyle,
+        onEachFeature: onEachFeature
+    });
+
+    // Default view — show ALL data, fit bounds safely
+    iriAllLayer.addTo(map);
+
+    var bounds = iriAllLayer.getBounds();
+    if(bounds.isValid()){
+        map.fitBounds(bounds, {padding:[40,40]});
+    }
+
+    updateLayerControl();
+
+})
+.catch(error => {
+    console.error(error);
+});
+
+
+// ========================================
+// County Roads Layer
+// ========================================
+fetch("./Clinton_roads.geojson")
+.then(response => {
+    if(!response.ok){
+        throw new Error("Road GeoJSON not found");
+    }
+    return response.json();
+})
+.then(data => {
+
+    roadsLayer = L.geoJSON(data, {
 
         style: function(feature){
             return {
-                color: feature.properties.color_hex ||
-                       getColor(feature.properties.iri_class),
-                weight: 7,
-                opacity: 0.9
+                color: getRoadColor(feature.properties.Road),
+                weight:4,
+                opacity:0.8
             };
         },
 
@@ -106,47 +206,61 @@ fetch("./iri.geojson")
             var p = feature.properties;
 
             layer.bindPopup(
-                "<b>Road Name:</b> " + safe(p.road_id) +
-                "<b><b>Road Type:</b> " + safe(p.road_type) +
-                "<br><b>Segment IRI:</b> " + safe(p.iri_in_mi) + " in/mile" +
-                "<br><b>Whole IRI:</b> " + safe(p.whole_iri_in_mi) + " in/mile" +
-                "<br><b>Direction:</b> " + safe(p.direction) +
-                "<br><b>Collection Date:</b> " + safe(p.collect_dt)
+                "<b>Road:</b> " + safe(p.FULL_NAME) +
+                "<br><b>Class:</b> " + safe(p.Road) +
+                "<br><b>Type:</b> " + safe(p.ROAD_TYPE)
             );
 
-            // Hover effect
             layer.on({
-                mouseover: function(e){
-                    e.target.setStyle({
-                        weight:10
-                    });
+                mouseover:function(e){
+                    e.target.setStyle({weight:7});
                 },
-                mouseout: function(e){
-                    layer.resetStyle
-                        ? layer.resetStyle(e.target)
-                        : e.target.setStyle({weight:7});
+                mouseout:function(e){
+                    roadsLayer.resetStyle(e.target);
                 }
             });
-
         }
 
     }).addTo(map);
 
-    // Fit all Iowa data nicely
-    map.fitBounds(layer.getBounds(), {
-        padding:[40,40]
-    });
+    updateLayerControl();
 
 })
 .catch(error => {
-
     console.error(error);
-    alert(error);
-
 });
 
 
+// ========================================
+// Layer Control
+// ========================================
+function updateLayerControl(){
+
+    if(layerControl){
+        map.removeControl(layerControl);
+    }
+
+    var overlays = {};
+
+    if(iriAllLayer){
+        overlays["IRI Layer (All Data)"] = iriAllLayer;
+    }
+
+    if(iri2026Layer){
+        overlays["IRI Layer (2026+)"] = iri2026Layer;
+    }
+
+    if(roadsLayer){
+        overlays["County Roads Layer"] = roadsLayer;
+    }
+
+    layerControl = L.control.layers(null, overlays).addTo(map);
+}
+
+
+// ========================================
 // Legend
+// ========================================
 var legend = L.control({position:'bottomleft'});
 
 legend.onAdd = function(){
@@ -159,7 +273,11 @@ legend.onAdd = function(){
     '<i style="background:#8BC34A"></i> Good (85–105)<br>' +
     '<i style="background:#FFFF00"></i> Fair (105–125)<br>' +
     '<i style="background:#FF9800"></i> Acceptable (125–145)<br>' +
-    '<i style="background:#D32F2F"></i> Bad (&gt;145)';
+    '<i style="background:#D32F2F"></i> Bad (&gt;145)<br><br>' +
+
+    '<b>Road Class</b><br>' +
+    '<i style="background:#FF00FF"></i> Primary<br>' +
+    '<i style="background:#00FFFF"></i> Secondary';
 
     return div;
 };

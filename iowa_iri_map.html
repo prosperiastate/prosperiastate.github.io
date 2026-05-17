@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Iowa IRI Map</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f6f8;
+    --panel: #ffffff;
+    --border: #dde0e8;
+    --text: #1a1d27;
+    --muted: #7a7f9a;
+    --accent: #1a6ef5;
+    --radius: 12px;
+    --panel-h: 118px;
+    --topbar-h: 48px;
+  }
+
+  html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
+
+  /* MAP */
+  #map { position: absolute; inset: 0; bottom: var(--panel-h); }
+
+  /* TOP BAR */
+  #topbar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: var(--topbar-h);
+    z-index: 900;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  #topbar h1 {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    color: var(--accent);
+    flex: 1;
+  }
+
+  /* GPS BUTTON */
+  #gpsBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 7px 13px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #gpsBtn:active { transform: scale(0.96); }
+  #gpsBtn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  #gpsBtn.searching { border-color: #f9a825; color: #f9a825; }
+  #gpsBtn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+  /* ZOOM CONTROL — pushed below topbar */
+  .leaflet-top.leaflet-left { top: calc(var(--topbar-h) + 10px) !important; }
+  .leaflet-control-zoom { border: 1px solid var(--border) !important; background: #fff !important; box-shadow: 0 2px 8px rgba(0,0,0,0.10) !important; }
+  .leaflet-control-zoom a { background: #fff !important; color: var(--text) !important; border-color: var(--border) !important; font-size: 18px !important; width: 36px !important; height: 36px !important; line-height: 36px !important; }
+  .leaflet-bar { border-color: var(--border) !important; }
+  .leaflet-touch .leaflet-bar { border-color: var(--border) !important; }
+
+  /* BOTTOM PANEL */
+  #panel {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: var(--panel-h);
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    z-index: 900;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+  }
+
+  /* LAYER TABS */
+  #layerTabs {
+    display: flex;
+    padding: 10px 10px 0;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 7px 6px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s;
+    -webkit-tap-highlight-color: transparent;
+    text-align: center;
+    line-height: 1.2;
+  }
+  .tab-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tab-btn:active { transform: scale(0.96); }
+
+  /* LEGEND SCROLL */
+  #legendScroll {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  #legendScroll::-webkit-scrollbar { display: none; }
+
+  .legend-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 10px 4px 7px;
+    white-space: nowrap;
+    font-size: 11px;
+    color: var(--text);
+    flex-shrink: 0;
+  }
+  .legend-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  .legend-line { width: 20px; height: 4px; border-radius: 2px; flex-shrink: 0; }
+
+  /* INFO POPUP */
+  #infoPanel {
+    position: absolute;
+    bottom: calc(var(--panel-h) + 8px);
+    left: 10px; right: 10px;
+    z-index: 950;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    font-size: 13px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.11);
+    display: none;
+    animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  #infoPanel.visible { display: block; }
+  #infoPanelClose {
+    position: absolute; top: 10px; right: 12px;
+    background: none; border: none;
+    color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #infoTitle { font-weight: 600; font-size: 14px; margin-bottom: 8px; padding-right: 24px; color: var(--text); }
+  #infoGrid { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; }
+  .info-key { color: var(--muted); }
+  .info-val { color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; }
+  .iri-badge {
+    display: inline-block; border-radius: 999px; padding: 1px 9px;
+    font-size: 11px; font-weight: 600; color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+
+  /* GPS DOT */
+  .gps-dot {
+    width: 18px; height: 18px;
+    background: var(--accent);
+    border: 3px solid #fff; border-radius: 50%;
+    box-shadow: 0 0 0 6px rgba(26,110,245,0.2);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 4px rgba(26,110,245,0.25); }
+    50%      { box-shadow: 0 0 0 10px rgba(26,110,245,0.06); }
+  }
+  .leaflet-gps-accuracy { pointer-events: none; }
+
+  /* GPS status toast */
+  #gpsStatus {
+    position: absolute;
+    top: calc(var(--topbar-h) + 8px); left: 50%; transform: translateX(-50%);
+    z-index: 960;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 5px 14px;
+    font-size: 12px; color: var(--muted);
+    white-space: nowrap; display: none; pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  }
+  #gpsStatus.visible { display: block; }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <h1>📍 Iowa IRI Map</h1>
+  <button id="gpsBtn" onclick="toggleGPS()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+      <circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/>
+    </svg>
+    GPS
+  </button>
+</div>
+
+<div id="map"></div>
+
+<div id="gpsStatus"></div>
+
+<!-- Info panel -->
+<div id="infoPanel">
+  <button id="infoPanelClose" onclick="closeInfo()">×</button>
+  <div id="infoTitle">—</div>
+  <div id="infoGrid"></div>
+</div>
+
+<!-- Bottom panel -->
+<div id="panel">
+  <div id="layerTabs">
+    <button class="tab-btn active" onclick="setLayer('all')" id="tab-all">IRI All</button>
+    <button class="tab-btn" onclick="setLayer('2026')" id="tab-2026">IRI 2026+</button>
+    <button class="tab-btn active" onclick="setLayer('roads')" id="tab-roads">Roads</button>
+  </div>
+  <div id="legendScroll">
+    <div class="legend-chip"><div class="legend-dot" style="background:#2E7D32"></div>Excellent &lt;85</div>
+    <div class="legend-chip"><div class="legend-dot" style="background:#8BC34A"></div>Good 85–105</div>
+    <div class="legend-chip"><div class="legend-dot" style="background:#FFFF00"></div>Fair 105–125</div>
+    <div class="legend-chip"><div class="legend-dot" style="background:#FF9800"></div>Acceptable 125–145</div>
+    <div class="legend-chip"><div class="legend-dot" style="background:#D32F2F"></div>Bad &gt;145</div>
+    <div class="legend-chip"><div class="legend-line" style="background:#FF00FF"></div>Primary</div>
+    <div class="legend-chip"><div class="legend-line" style="background:#00FFFF"></div>Secondary</div>
+  </div>
+</div>
+
+<script>
+
+// ── Map init ──────────────────────────────────────────────
+var map = L.map('map', {
+  center: [42.05, -93.5],
+  zoom: 8,
+  zoomControl: true,
+  tap: true,
+  tapTolerance: 20      // bigger tap target on mobile
+});
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '© OpenStreetMap'
+}).addTo(map);
+
+// ── Helpers ───────────────────────────────────────────────
+function getColor(cls){
+  return { Excellent:"#2E7D32", Good:"#8BC34A", Fair:"#FFFF00",
+           Acceptable:"#FF9800", Bad:"#D32F2F" }[cls] || "#888";
+}
+function getRoadColor(type){
+  return { Primary:"#FF00FF", Secondary:"#00FFFF" }[type] || "#666";
+}
+function safe(v){ return (v===null||v===undefined||v==="")?"N/A":v; }
+function getYear(d){ if(!d) return null; var x=new Date(d); return isNaN(x)?null:x.getFullYear(); }
+
+var iriAllLayer, iri2026Layer, roadsLayer;
+var tabState = { all: true, '2026': false, roads: true };
+
+// ── Info panel ────────────────────────────────────────────
+function showInfo(title, rows, iriClass){
+  document.getElementById('infoTitle').textContent = title;
+  var g = document.getElementById('infoGrid');
+  g.innerHTML = '';
+  rows.forEach(function(r){
+    var k = document.createElement('div'); k.className='info-key'; k.textContent=r[0];
+    var v = document.createElement('div'); v.className='info-val';
+    if(r[2]){ // badge
+      var b=document.createElement('span'); b.className='iri-badge';
+      b.style.background=getColor(r[1]); b.textContent=r[1];
+      v.appendChild(b);
+    } else { v.textContent=r[1]; }
+    g.appendChild(k); g.appendChild(v);
+  });
+  document.getElementById('infoPanel').classList.add('visible');
+}
+function closeInfo(){ document.getElementById('infoPanel').classList.remove('visible'); }
+
+// close info when tapping map background
+map.on('click', function(){ closeInfo(); });
+
+// ── Line weight: bigger on mobile ─────────────────────────
+var isMobile = window.matchMedia('(max-width:768px)').matches;
+var BASE_W = isMobile ? 10 : 6;
+var HOVER_W = isMobile ? 16 : 10;
+
+// ── IRI layer ─────────────────────────────────────────────
+fetch("./iri.geojson")
+  .then(r => { if(!r.ok) throw new Error("IRI GeoJSON not found"); return r.json(); })
+  .then(data => {
+
+    function iriStyle(f){
+      return {
+        color: f.properties.color_hex || getColor(f.properties.iri_class),
+        weight: BASE_W,
+        opacity: 0.9
+      };
+    }
+
+    function onEachIRI(feature, layer){
+      var p = feature.properties;
+
+      // Fat touch target overlay
+      var hitLayer = L.geoJSON(feature, {
+        style: { color:'transparent', weight: isMobile?30:18, opacity:0, fillOpacity:0 }
+      });
+
+      function handleTap(){
+        // highlight
+        if(iriAllLayer) iriAllLayer.resetStyle(layer);
+        layer.setStyle({weight: HOVER_W, opacity:1});
+
+        var speedStr = p.whole_speed_mph
+          ? p.whole_speed_mph + " mph / " + p.whole_speed_kmh + " km/h"
+          : p.speed
+            ? (Math.round(p.speed*0.621371*10)/10)+" mph / "+p.speed+" km/h"
+            : "N/A";
+
+        showInfo(
+          safe(p.road_id) + (p.road_type?" · "+p.road_type:""),
+          [
+            ["IRI Class", safe(p.iri_class), true],
+            ["Segment IRI", safe(p.iri_in_mi)+" in/mi", false],
+            ["Whole IRI", safe(p.whole_iri_in_mi)+" in/mi", false],
+            ["Speed", speedStr, false],
+            ["Direction", safe(p.direction), false],
+            ["Collected", safe(p.collect_dt), false]
+          ]
+        );
+      }
+
+      layer.on({
+        click: function(e){ L.DomEvent.stopPropagation(e); handleTap(); },
+        mouseover: function(e){ e.target.setStyle({weight:HOVER_W}); },
+        mouseout: function(e){
+          if(iriAllLayer) iriAllLayer.resetStyle(e.target);
+        }
+      });
+    }
+
+    iriAllLayer = L.geoJSON(data, { style:iriStyle, onEachFeature:onEachIRI });
+    iri2026Layer = L.geoJSON(data, {
+      filter: function(f){ var y=getYear(f.properties.collect_dt); return y!==null&&y>=2026; },
+      style: iriStyle,
+      onEachFeature: onEachIRI
+    });
+
+    if(tabState.all) iriAllLayer.addTo(map);
+    var b = iriAllLayer.getBounds();
+    if(b.isValid()) map.fitBounds(b, {padding:[50,50]});
+  })
+  .catch(e => console.warn(e));
+
+// ── County Roads layer ────────────────────────────────────
+fetch("./Clinton_roads.geojson")
+  .then(r => { if(!r.ok) throw new Error("Roads GeoJSON not found"); return r.json(); })
+  .then(data => {
+    roadsLayer = L.geoJSON(data, {
+      style: function(f){
+        return { color:getRoadColor(f.properties.Road), weight: isMobile?7:4, opacity:0.8 };
+      },
+      onEachFeature: function(feature, layer){
+        var p = feature.properties;
+        function handleTap(){
+          layer.setStyle({weight: isMobile?14:8});
+          setTimeout(function(){ if(roadsLayer) roadsLayer.resetStyle(layer); }, 800);
+          showInfo(
+            safe(p.FULL_NAME),
+            [
+              ["Class", safe(p.Road), false],
+              ["Type", safe(p.ROAD_TYPE), false]
+            ]
+          );
+        }
+        layer.on({
+          click: function(e){ L.DomEvent.stopPropagation(e); handleTap(); },
+          mouseover: function(e){ e.target.setStyle({weight: isMobile?14:8}); },
+          mouseout: function(e){ if(roadsLayer) roadsLayer.resetStyle(e.target); }
+        });
+      }
+    });
+    if(tabState.roads) roadsLayer.addTo(map);
+  })
+  .catch(e => console.warn(e));
+
+// ── Layer toggle ──────────────────────────────────────────
+function setLayer(name){
+  var btn = document.getElementById('tab-'+name);
+  tabState[name] = !tabState[name];
+  btn.classList.toggle('active', tabState[name]);
+
+  function toggle(layer, on){
+    if(!layer) return;
+    if(on && !map.hasLayer(layer)) map.addLayer(layer);
+    if(!on && map.hasLayer(layer)) map.removeLayer(layer);
+  }
+
+  if(name === 'all'){
+    toggle(iriAllLayer, tabState.all);
+    // mutual exclusion with 2026
+    if(tabState.all && tabState['2026']){
+      tabState['2026'] = false;
+      document.getElementById('tab-2026').classList.remove('active');
+      toggle(iri2026Layer, false);
+    }
+  } else if(name === '2026'){
+    toggle(iri2026Layer, tabState['2026']);
+    if(tabState['2026'] && tabState.all){
+      tabState.all = false;
+      document.getElementById('tab-all').classList.remove('active');
+      toggle(iriAllLayer, false);
+    }
+  } else if(name === 'roads'){
+    toggle(roadsLayer, tabState.roads);
+  }
+}
+
+// ── GPS ───────────────────────────────────────────────────
+var gpsActive = false;
+var gpsWatchId = null;
+var gpsMarker = null;
+var gpsCircle = null;
+var gpsFollowing = false;
+var gpsStatusEl = document.getElementById('gpsStatus');
+var gpsBtnEl = document.getElementById('gpsBtn');
+
+function showGPSStatus(msg, duration){
+  gpsStatusEl.textContent = msg;
+  gpsStatusEl.classList.add('visible');
+  if(duration){
+    setTimeout(function(){ gpsStatusEl.classList.remove('visible'); }, duration);
+  }
+}
+function hideGPSStatus(){ gpsStatusEl.classList.remove('visible'); }
+
+function toggleGPS(){
+  if(gpsActive){
+    stopGPS();
+  } else {
+    startGPS();
+  }
+}
+
+function startGPS(){
+  if(!navigator.geolocation){
+    showGPSStatus('GPS not supported on this device', 3000);
+    return;
+  }
+  gpsActive = true;
+  gpsFollowing = true;
+  gpsBtnEl.classList.add('searching');
+  gpsBtnEl.querySelector('span') && (gpsBtnEl.querySelector('span').textContent='Locating…');
+  showGPSStatus('📡 Searching for GPS signal…');
+
+  gpsWatchId = navigator.geolocation.watchPosition(
+    onGPSSuccess,
+    onGPSError,
+    { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+  );
+}
+
+function stopGPS(){
+  gpsActive = false;
+  gpsFollowing = false;
+  if(gpsWatchId !== null){
+    navigator.geolocation.clearWatch(gpsWatchId);
+    gpsWatchId = null;
+  }
+  if(gpsMarker){ map.removeLayer(gpsMarker); gpsMarker=null; }
+  if(gpsCircle){ map.removeLayer(gpsCircle); gpsCircle=null; }
+  gpsBtnEl.classList.remove('active','searching');
+  hideGPSStatus();
+}
+
+function onGPSSuccess(pos){
+  var lat = pos.coords.latitude;
+  var lng = pos.coords.longitude;
+  var acc = pos.coords.accuracy;
+
+  gpsBtnEl.classList.remove('searching');
+  gpsBtnEl.classList.add('active');
+  showGPSStatus('📍 Accuracy: ~'+Math.round(acc)+'m', 3000);
+
+  // Draw accuracy circle
+  if(gpsCircle) map.removeLayer(gpsCircle);
+  gpsCircle = L.circle([lat,lng], {
+    radius: acc,
+    color: '#1a6ef5',
+    fillColor: '#1a6ef5',
+    fillOpacity: 0.08,
+    weight: 1,
+    className: 'leaflet-gps-accuracy'
+  }).addTo(map);
+
+  // Draw dot marker
+  if(gpsMarker) map.removeLayer(gpsMarker);
+  var icon = L.divIcon({
+    className: '',
+    html: '<div class="gps-dot"></div>',
+    iconSize: [18,18],
+    iconAnchor: [9,9]
+  });
+  gpsMarker = L.marker([lat,lng], { icon:icon, zIndexOffset:1000 })
+    .addTo(map)
+    .bindPopup('<b>You are here</b><br>Accuracy: ~'+Math.round(acc)+'m<br>'+lat.toFixed(5)+', '+lng.toFixed(5));
+
+  if(gpsFollowing){
+    map.setView([lat,lng], Math.max(map.getZoom(), 14));
+    gpsFollowing = false; // only fly once, then user can pan freely
+  }
+}
+
+function onGPSError(err){
+  gpsBtnEl.classList.remove('searching','active');
+  gpsActive = false;
+  var msgs = {
+    1: 'Location permission denied. Please allow location access.',
+    2: 'GPS signal unavailable.',
+    3: 'GPS timed out. Try again outdoors.'
+  };
+  showGPSStatus('⚠️ '+(msgs[err.code]||'GPS error'), 4000);
+}
+
+// Stop following when user pans
+map.on('dragstart', function(){ gpsFollowing = false; });
+
+// Re-center on GPS dot when button tapped while active
+document.getElementById('gpsBtn').addEventListener('click', function(){
+  if(gpsActive && gpsMarker){
+    gpsFollowing = true;
+    map.setView(gpsMarker.getLatLng(), Math.max(map.getZoom(),14));
+  }
+});
+
+</script>
+</body>
+</html>

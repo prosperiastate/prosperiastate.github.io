@@ -1,291 +1,539 @@
-
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Iowa IRI Map</title>
 
-<link rel="stylesheet"
-href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <style>
-html, body {
-    height:100%;
-    margin:0;
-}
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f6f8; --panel: #ffffff; --border: #dde0e8;
+    --text: #1a1d27; --muted: #7a7f9a;
+    --accent: #1a6ef5; --accent2: #7c3aed; --clinton: #e67e00;
+    --radius: 12px; --panel-h: 118px; --topbar-h: 48px;
+  }
+  html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
+  #map { position: absolute; inset: 0; top: var(--topbar-h); bottom: var(--panel-h); }
 
-#map {
-    width:100%;
-    height:100%;
-}
+  /* TOP BAR */
+  #topbar {
+    position: absolute; top: 0; left: 0; right: 0; height: var(--topbar-h);
+    z-index: 900; background: rgba(255,255,255,0.97); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border); padding: 0 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  #topbar h1 {
+    font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500;
+    letter-spacing: 0.03em; color: var(--accent); flex: 1;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #modeToggle {
+    display: flex; align-items: center; background: var(--bg);
+    border: 1.5px solid var(--border); border-radius: 999px; padding: 3px; gap: 2px; flex-shrink: 0;
+  }
+  .mode-btn {
+    padding: 4px 11px; border-radius: 999px; border: none; background: transparent;
+    color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600;
+    cursor: pointer; transition: all 0.18s; white-space: nowrap;
+    -webkit-tap-highlight-color: transparent; letter-spacing: 0.02em;
+  }
+  .mode-btn.active          { background: var(--accent);  color: #fff; box-shadow: 0 1px 4px rgba(26,110,245,0.3); }
+  .mode-btn.active.seg-pill { background: var(--accent2); box-shadow: 0 1px 4px rgba(124,58,237,0.3); }
+  .mode-btn:active { transform: scale(0.95); }
 
-.legend {
-    background:white;
-    padding:14px;
-    line-height:24px;
-    font-family:Arial;
-    font-size:16px;
-    box-shadow:0 0 12px rgba(0,0,0,0.3);
-    border-radius:8px;
-}
-.legend i {
-    width:20px;
-    height:20px;
-    float:left;
-    margin-right:10px;
-}
+  #gpsBtn {
+    display: flex; align-items: center; gap: 6px; background: var(--bg);
+    border: 1.5px solid var(--border); color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 500; padding: 6px 11px; border-radius: 999px;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    -webkit-tap-highlight-color: transparent; flex-shrink: 0;
+  }
+  #gpsBtn:active { transform: scale(0.96); }
+  #gpsBtn.active    { background: var(--accent); border-color: var(--accent); color: #fff; }
+  #gpsBtn.searching { border-color: #f9a825; color: #f9a825; }
+  #gpsBtn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+  /* ZOOM */
+  .leaflet-top.leaflet-left { top: 10px !important; }
+  .leaflet-control-zoom { border: 1px solid var(--border) !important; background: #fff !important; box-shadow: 0 2px 8px rgba(0,0,0,0.10) !important; }
+  .leaflet-control-zoom a { background: #fff !important; color: var(--text) !important; border-color: var(--border) !important; font-size: 18px !important; width: 36px !important; height: 36px !important; line-height: 36px !important; }
+  .leaflet-bar { border-color: var(--border) !important; }
+
+  /* BOTTOM PANEL */
+  #panel {
+    position: absolute; bottom: 0; left: 0; right: 0; height: var(--panel-h);
+    background: var(--panel); border-top: 1px solid var(--border);
+    z-index: 900; display: flex; flex-direction: column;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+  }
+  #layerTabs { display: flex; padding: 10px 10px 0; gap: 6px; flex-shrink: 0; }
+  .tab-btn {
+    flex: 1; padding: 7px 6px; border-radius: 8px; border: 1.5px solid var(--border);
+    background: transparent; color: var(--muted); font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.18s;
+    -webkit-tap-highlight-color: transparent; text-align: center; line-height: 1.2;
+  }
+  .tab-btn:active { transform: scale(0.96); }
+  .tab-btn.iri-on          { background: var(--accent);  border-color: var(--accent);  color: #fff; }
+  .tab-btn.iri-on.seg-mode { background: var(--accent2); border-color: var(--accent2); }
+  .tab-btn.clinton-on      { background: var(--clinton); border-color: var(--clinton); color: #fff; }
+
+  #legendScroll {
+    flex: 1; overflow-x: auto; overflow-y: hidden; display: flex; align-items: center;
+    gap: 6px; padding: 8px 10px; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  #legendScroll::-webkit-scrollbar { display: none; }
+  .legend-chip {
+    display: flex; align-items: center; gap: 6px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px 4px 7px;
+    white-space: nowrap; font-size: 11px; color: var(--text); flex-shrink: 0;
+  }
+  .legend-dot  { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  .legend-line { width: 20px; height: 4px; border-radius: 2px; flex-shrink: 0; }
+
+  /* INFO PANEL */
+  #infoPanel {
+    position: absolute; bottom: calc(var(--panel-h) + 8px); left: 10px; right: 10px;
+    z-index: 950; background: #fff; border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px; font-size: 13px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.11); display: none; animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  #infoPanel.visible { display: block; }
+  #infoPanelClose {
+    position: absolute; top: 10px; right: 12px; background: none; border: none;
+    color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1;
+  }
+  #infoTitle { font-weight: 600; font-size: 14px; margin-bottom: 8px; padding-right: 24px; }
+  #infoGrid  { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; }
+  .info-key  { color: var(--muted); }
+  .info-val  { color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; }
+  .iri-badge { display: inline-block; border-radius: 999px; padding: 1px 9px; font-size: 11px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+  #infoMode  { display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; padding: 2px 7px; border-radius: 999px; margin-bottom: 6px; text-transform: uppercase; }
+  #infoMode.whole { background: rgba(26,110,245,0.1); color: var(--accent); }
+  #infoMode.seg   { background: rgba(124,58,237,0.1); color: var(--accent2); }
+
+  /* GPS */
+  .gps-dot { width:18px; height:18px; background:var(--accent); border:3px solid #fff; border-radius:50%; box-shadow:0 0 0 6px rgba(26,110,245,0.2); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 4px rgba(26,110,245,0.25);}50%{box-shadow:0 0 0 10px rgba(26,110,245,0.06);} }
+  .leaflet-gps-accuracy { pointer-events: none; }
+  #gpsStatus { position:absolute; top:calc(var(--topbar-h)+8px); left:50%; transform:translateX(-50%); z-index:960; background:#fff; border:1px solid var(--border); border-radius:999px; padding:5px 14px; font-size:12px; color:var(--muted); white-space:nowrap; display:none; pointer-events:none; box-shadow:0 2px 8px rgba(0,0,0,0.10); }
+  #gpsStatus.visible { display: block; }
+
+  #loadingToast { position:absolute; top:calc(var(--topbar-h)+8px); right:10px; z-index:960; background:#fff; border:1px solid var(--border); border-radius:999px; padding:5px 12px; font-size:11px; color:var(--muted); display:none; box-shadow:0 2px 8px rgba(0,0,0,0.10); align-items:center; gap:6px; }
+  #loadingToast.visible { display: flex; }
+  .spinner { width:12px; height:12px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.7s linear infinite; flex-shrink:0; }
+  .spinner.seg { border-top-color: var(--accent2); }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
-
 <body>
 
+<div id="topbar">
+  <h1>📍 Iowa IRI Map</h1>
+  <div id="modeToggle">
+    <button class="mode-btn active"   id="modeWhole" onclick="setMode('whole')">Whole</button>
+    <button class="mode-btn seg-pill" id="modeSeg"   onclick="setMode('segment')">Segment</button>
+  </div>
+  <button id="gpsBtn" onclick="toggleGPS()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+      <circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/>
+    </svg>
+    GPS
+  </button>
+</div>
+
 <div id="map"></div>
+<div id="gpsStatus"></div>
+<div id="loadingToast"><div class="spinner" id="spinnerEl"></div><span id="loadingMsg">Loading…</span></div>
+
+<div id="infoPanel">
+  <button id="infoPanelClose" onclick="closeInfo()">×</button>
+  <div id="infoMode" class="whole">Whole Road</div>
+  <div id="infoTitle">—</div>
+  <div id="infoGrid"></div>
+</div>
+
+<div id="panel">
+  <div id="layerTabs">
+    <button class="tab-btn iri-on"     id="tab-all"     onclick="setIRI('all')">IRI All</button>
+    <button class="tab-btn"            id="tab-2026"    onclick="setIRI('2026')">IRI 2026</button>
+    <button class="tab-btn clinton-on" id="tab-clinton" onclick="toggleClinton()">Clinton Co.</button>
+  </div>
+  <div id="legendScroll">
+    <div class="legend-chip"><div class="legend-dot" style="background:#2E7D32"></div>Excellent &lt;85</div>
+    <div class="legend-chip"><div class="legend-dot" style="background:#8BC34A"></div>Good 85–105</div>
+    <div class="legend-chip"><div class="legend-dot" style="background:#FFFF00"></div>Fair 105–125</div>
+    <div class="legend-chip"><div class="legend-dot" style="background:#FF9800"></div>Acceptable 125–145</div>
+    <div class="legend-chip"><div class="legend-dot" style="background:#D32F2F"></div>Bad &gt;145</div>
+    <div class="legend-chip"><div class="legend-line" style="background:#FF00FF"></div>Primary</div>
+    <div class="legend-chip"><div class="legend-line" style="background:#00FFFF"></div>Secondary</div>
+  </div>
+</div>
 
 <script>
-
-// Initial Iowa zoom
-var map = L.map('map').setView([42.05, -93.5], 8);
-
-L.tileLayer(
-'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-{
-    maxZoom:19
-}
-).addTo(map);
-
-
-// ----------------------
-// IRI Color scheme
-// ----------------------
-function getColor(cls){
-    return {
-        "Excellent":"#2E7D32",
-        "Good":"#8BC34A",
-        "Fair":"#FFFF00",
-        "Acceptable":"#FF9800",
-        "Bad":"#D32F2F"
-    }[cls] || "#000000";
-}
-
-
-// ----------------------
-// Road Layer Colors
-// ----------------------
-function getRoadColor(type){
-    return {
-        "Primary":"#FF00FF",
-        "Secondary":"#00FFFF"
-    }[type] || "#666666";
-}
-
-
-// Null-safe display
-function safe(val){
-    return (val === null || val === undefined || val === "")
-        ? "N/A"
-        : val;
-}
-
-
-// Get year from date
-function getYear(dateStr){
-    if(!dateStr) return null;
-    var d = new Date(dateStr);
-    if(isNaN(d)) return null;
-    return d.getFullYear();
-}
-
-var iriAllLayer;
-var iri2026Layer;
-var roadsLayer;
-var layerControl;
-
-
-// ========================================
-// Load IRI Layer (ALL + 2026 filter)
-// ========================================
-fetch("./iri.geojson")
-.then(response => {
-    if(!response.ok){
-        throw new Error("IRI GeoJSON not found");
-    }
-    return response.json();
-})
-.then(data => {
-
-    function iriStyle(feature){
-        return {
-            color: feature.properties.color_hex ||
-                   getColor(feature.properties.iri_class),
-            weight: 7,
-            opacity: 0.9
-        };
-    }
-
-    function onEachFeature(feature, layer){
-
-        var p = feature.properties;
-
-        layer.bindPopup(
-            "<b>Road Name:</b> " + safe(p.road_id) +
-            "<br><b>Road Type:</b> " + safe(p.road_type) +
-            "<br><b>Segment IRI:</b> " + safe(p.iri_in_mi) + " in/mile" +
-            "<br><b>Whole IRI:</b> " + safe(p.whole_iri_in_mi) + " in/mile" +
-            "<br><b>Speed:</b> " + (p.whole_speed_mph ? p.whole_speed_mph + " mph / " + p.whole_speed_kmh + " km/h" : p.speed ? (Math.round(p.speed * 0.621371 * 10)/10) + " mph / " + p.speed + " km/h" : "N/A") +
-            "<br><b>Direction:</b> " + safe(p.direction) +
-            "<br><b>Collection Date:</b> " + safe(p.collect_dt)
-        );
-
-        layer.on({
-            mouseover: function(e){
-                e.target.setStyle({weight:10});
-            },
-            mouseout: function(e){
-                if(iriAllLayer) iriAllLayer.resetStyle(e.target);
-            }
-        });
-    }
-
-    // ALL DATA LAYER
-    iriAllLayer = L.geoJSON(data, {
-        style: iriStyle,
-        onEachFeature: onEachFeature
-    });
-
-    // 2026+ FILTERED LAYER
-    iri2026Layer = L.geoJSON(data, {
-        filter: function(feature){
-            var year = getYear(feature.properties.collect_dt);
-            return year !== null && year >= 2026;
-        },
-        style: iriStyle,
-        onEachFeature: onEachFeature
-    });
-
-    // Default view — show ALL data, fit bounds safely
-    iriAllLayer.addTo(map);
-
-    var bounds = iriAllLayer.getBounds();
-    if(bounds.isValid()){
-        map.fitBounds(bounds, {padding:[40,40]});
-    }
-
-    updateLayerControl();
-
-})
-.catch(error => {
-    console.error(error);
-});
-
-
-// ========================================
-// County Roads Layer
-// ========================================
-fetch("./Clinton_roads.geojson")
-.then(response => {
-    if(!response.ok){
-        throw new Error("Road GeoJSON not found");
-    }
-    return response.json();
-})
-.then(data => {
-
-    roadsLayer = L.geoJSON(data, {
-
-        style: function(feature){
-            return {
-                color: getRoadColor(feature.properties.Road),
-                weight:4,
-                opacity:0.8
-            };
-        },
-
-        onEachFeature: function(feature, layer){
-
-            var p = feature.properties;
-
-            layer.bindPopup(
-                "<b>Road:</b> " + safe(p.FULL_NAME) +
-                "<br><b>Class:</b> " + safe(p.Road) +
-                "<br><b>Type:</b> " + safe(p.ROAD_TYPE)
-            );
-
-            layer.on({
-                mouseover:function(e){
-                    e.target.setStyle({weight:7});
-                },
-                mouseout:function(e){
-                    roadsLayer.resetStyle(e.target);
-                }
-            });
-        }
-
-    }).addTo(map);
-
-    updateLayerControl();
-
-})
-.catch(error => {
-    console.error(error);
-});
-
-
-// ========================================
-// Layer Control
-// ========================================
-function updateLayerControl(){
-
-    if(layerControl){
-        map.removeControl(layerControl);
-    }
-
-    var overlays = {};
-
-    if(iriAllLayer){
-        overlays["IRI Layer (All Data)"] = iriAllLayer;
-    }
-
-    if(iri2026Layer){
-        overlays["IRI Layer (2026+)"] = iri2026Layer;
-    }
-
-    if(roadsLayer){
-        overlays["County Roads Layer"] = roadsLayer;
-    }
-
-    layerControl = L.control.layers(null, overlays).addTo(map);
-}
-
-
-// ========================================
-// Legend
-// ========================================
-var legend = L.control({position:'bottomleft'});
-
-legend.onAdd = function(){
-
-    var div = L.DomUtil.create('div','legend');
-
-    div.innerHTML =
-    '<b>IRI (in/mile)</b><br>' +
-    '<i style="background:#2E7D32"></i> Excellent (&lt;85)<br>' +
-    '<i style="background:#8BC34A"></i> Good (85–105)<br>' +
-    '<i style="background:#FFFF00"></i> Fair (105–125)<br>' +
-    '<i style="background:#FF9800"></i> Acceptable (125–145)<br>' +
-    '<i style="background:#D32F2F"></i> Bad (&gt;145)<br><br>' +
-
-    '<b>Road Class</b><br>' +
-    '<i style="background:#FF00FF"></i> Primary<br>' +
-    '<i style="background:#00FFFF"></i> Secondary';
-
-    return div;
+// ─────────────────────────────────────────────
+//  CONFIG
+// ─────────────────────────────────────────────
+var URLS = {
+  whole:   'https://pub-256928d690cc446c84032baa7343824c.r2.dev/website/iri_whole.geojson',
+  segment: 'https://pub-256928d690cc446c84032baa7343824c.r2.dev/website/iri_segments.geojson',
+  clinton: 'https://pub-256928d690cc446c84032baa7343824c.r2.dev/website/Clinton_roads.geojson'
 };
 
-legend.addTo(map);
+// ─────────────────────────────────────────────
+//  MAP INIT
+// ─────────────────────────────────────────────
+var map = L.map('map', { center:[42.05,-93.5], zoom:8, zoomControl:true, tap:true, tapTolerance:20 });
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(map);
 
+var isMobile = window.matchMedia('(max-width:768px)').matches;
+var BASE_W   = isMobile ? 10 : 5;
+var HOVER_W  = isMobile ? 16 : 9;
+
+// ─────────────────────────────────────────────
+//  STATE
+//  currentMode  : 'whole' | 'segment'
+//  activeIRITab : 'all'   | '2026'     ← mutually exclusive radio
+//  clintonOn    : true | false          ← independent toggle
+// ─────────────────────────────────────────────
+var currentMode  = 'whole';
+var activeIRITab = 'all';
+var clintonOn    = true;   // ON by default — auto-loaded at startup
+
+// Raw GeoJSON cache (avoid re-fetching)
+var geoCache = { whole: null, segment: null };
+
+// Built Leaflet layers per mode
+var iriLayers = {
+  whole:   { all: null, yr2026: null },
+  segment: { all: null, yr2026: null }
+};
+
+// Clinton: one layer, fetched once, always the same regardless of IRI mode
+var clintonLayer = null;
+
+// ─────────────────────────────────────────────
+//  HELPERS
+// ─────────────────────────────────────────────
+function getIRIColor(cls) {
+  return { Excellent:'#2E7D32', Good:'#8BC34A', Fair:'#FFFF00', Acceptable:'#FF9800', Bad:'#D32F2F' }[cls] || '#888';
+}
+function getRoadColor(type) {
+  return { Primary:'#FF00FF', Secondary:'#00FFFF' }[type] || '#aaa';
+}
+function safe(v) { return (v===null||v===undefined||v==='') ? 'N/A' : v; }
+function getYear(d) { if(!d) return null; var x=new Date(d); return isNaN(x)?null:x.getFullYear(); }
+
+// ─────────────────────────────────────────────
+//  LOADING TOAST
+// ─────────────────────────────────────────────
+var loadingToast = document.getElementById('loadingToast');
+var loadingMsg   = document.getElementById('loadingMsg');
+var spinnerEl    = document.getElementById('spinnerEl');
+function showLoading(msg, isSeg) {
+  loadingMsg.textContent = msg || 'Loading…';
+  spinnerEl.className = 'spinner' + (isSeg ? ' seg' : '');
+  loadingToast.classList.add('visible');
+}
+function hideLoading() { loadingToast.classList.remove('visible'); }
+
+// ─────────────────────────────────────────────
+//  INFO PANEL
+// ─────────────────────────────────────────────
+function showInfo(title, rows, mode) {
+  var el = document.getElementById('infoMode');
+  el.className = mode === 'segment' ? 'seg' : 'whole';
+  el.textContent = mode === 'segment' ? 'Segment' : 'Whole Road';
+  document.getElementById('infoTitle').textContent = title;
+  var g = document.getElementById('infoGrid');
+  g.innerHTML = '';
+  rows.forEach(function(r) {
+    var k = document.createElement('div'); k.className='info-key'; k.textContent=r[0];
+    var v = document.createElement('div'); v.className='info-val';
+    if (r[2]) { var b=document.createElement('span'); b.className='iri-badge'; b.style.background=getIRIColor(r[1]); b.textContent=r[1]; v.appendChild(b); }
+    else { v.textContent = r[1]; }
+    g.appendChild(k); g.appendChild(v);
+  });
+  document.getElementById('infoPanel').classList.add('visible');
+}
+function closeInfo() { document.getElementById('infoPanel').classList.remove('visible'); }
+map.on('click', closeInfo);
+
+// ─────────────────────────────────────────────
+//  IRI LAYER STYLE + INTERACTION
+// ─────────────────────────────────────────────
+function iriStyle(f) {
+  return { color: f.properties.color_hex || getIRIColor(f.properties.iri_class), weight: BASE_W, opacity: 0.9 };
+}
+
+function bindIRI(feature, layer, getParent, mode) {
+  var p = feature.properties;
+  layer.on({
+    mouseover: function(e) { e.target.setStyle({ weight: HOVER_W }); },
+    mouseout:  function(e) { var par=getParent(); if(par) par.resetStyle(e.target); },
+    click: function(e) {
+      L.DomEvent.stopPropagation(e);
+      var par = getParent(); if(par) par.resetStyle(layer);
+      layer.setStyle({ weight: HOVER_W, opacity: 1 });
+
+      var spd = 'N/A';
+      if (p.speed_mph!=null && p.speed_kmph!=null)
+        spd = (+p.speed_mph).toFixed(1)+' mph / '+(+p.speed_kmph).toFixed(1)+' km/h';
+      else if (p.speed!=null)
+        spd = (Math.round(p.speed*0.621371*10)/10)+' mph / '+p.speed+' km/h';
+
+      var rows = mode==='segment' ? [
+        ['IRI Class',  safe(p.iri_class),              true],
+        ['Seg IRI',    safe(p.iri_in_mi)+' in/mi',     false],
+        ['Whole IRI',  safe(p.whole_iri_in_mi)+' in/mi',false],
+        ['Seg Length', safe(p.seg_len_mi)+' mi',        false],
+        ['Road Length', safe(p.whole_len_mi)+' mi',   false],
+        ['Speed',      spd,                            false],
+        ['Direction',  safe(p.direction),              false],
+        ['Surface',    safe(p.surface),                false],
+        ['Collected',  safe(p.collect_dt),             false]
+      ] : [
+        ['IRI Class',   safe(p.iri_class),               true],
+        ['Road IRI',    safe(p.whole_iri_in_mi)+' in/mi',false],
+        ['Road Length', safe(p.whole_len_mi)+' mi',       false],
+        ['Speed',       spd,                             false],
+        ['Direction',   safe(p.direction),               false],
+        ['Surface',     safe(p.surface),                 false],
+        ['Road Type',   safe(p.road_type),               false],
+        ['Segments',    safe(p.n_segments),              false],
+        ['Collected',   safe(p.collect_dt),              false]
+      ];
+      showInfo(safe(p.road_id)+(p.road_type?' · '+p.road_type:''), rows, mode);
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+//  BUILD IRI LAYERS FOR ONE MODE
+// ─────────────────────────────────────────────
+function buildIRILayers(data, mode) {
+  var allLyr, yr2026Lyr;
+  allLyr = L.geoJSON(data, {
+    style: iriStyle,
+    onEachFeature: function(f,l) { bindIRI(f,l,function(){return allLyr;},mode); }
+  });
+  yr2026Lyr = L.geoJSON(data, {
+    filter: function(f){ var y=getYear(f.properties.collect_dt); return y!==null&&y>=2026; },
+    style: iriStyle,
+    onEachFeature: function(f,l) { bindIRI(f,l,function(){return yr2026Lyr;},mode); }
+  });
+  iriLayers[mode].all    = allLyr;
+  iriLayers[mode].yr2026 = yr2026Lyr;
+}
+
+// ─────────────────────────────────────────────
+//  FETCH IRI GEOJSON (cached)
+// ─────────────────────────────────────────────
+function fetchIRI(mode, cb) {
+  if (geoCache[mode]) { cb(geoCache[mode]); return; }
+  var isSeg = mode==='segment';
+  showLoading('Loading '+(isSeg?'segment':'whole road')+' data…', isSeg);
+  fetch(URLS[mode])
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(data){ geoCache[mode]=data; hideLoading(); cb(data); })
+    .catch(function(e){ hideLoading(); console.error('IRI fetch ('+mode+'):', e); });
+}
+
+// ─────────────────────────────────────────────
+//  CLINTON — fetched once, independent overlay
+// ─────────────────────────────────────────────
+function fetchClinton(cb) {
+  if (clintonLayer) { cb(); return; }
+  showLoading('Loading Clinton County roads…', false);
+  fetch(URLS.clinton)
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(data){
+      hideLoading();
+      clintonLayer = L.geoJSON(data, {
+        style: function(f) {
+          return { color: getRoadColor(f.properties.Road), weight: isMobile?6:3, opacity: 0.9 };
+        },
+        onEachFeature: function(feature, layer) {
+          var p = feature.properties;
+          layer.on({
+            mouseover: function(e) { e.target.setStyle({ weight: isMobile?12:6 }); },
+            mouseout:  function(e) { if(clintonLayer) clintonLayer.resetStyle(e.target); },
+            click: function(e) {
+              L.DomEvent.stopPropagation(e);
+              layer.setStyle({ weight: isMobile?12:6 });
+              setTimeout(function(){ if(clintonLayer) clintonLayer.resetStyle(layer); }, 800);
+              showInfo(
+                safe(p.FULL_NAME||p.Name||'Clinton County Road'),
+                [['Class', safe(p.Road), false], ['Type', safe(p.ROAD_TYPE), false]],
+                'whole'
+              );
+            }
+          });
+        }
+      });
+      cb();
+    })
+    .catch(function(e){ hideLoading(); console.error('Clinton fetch:', e); });
+}
+
+// ─────────────────────────────────────────────
+//  RENDER MAP
+//  Remove old IRI layers → add correct IRI layer → add Clinton if on
+// ─────────────────────────────────────────────
+function renderMap() {
+  var mode = currentMode;
+
+  // Remove all IRI layers
+  ['whole','segment'].forEach(function(m) {
+    ['all','yr2026'].forEach(function(k) {
+      var l = iriLayers[m][k];
+      if (l && map.hasLayer(l)) map.removeLayer(l);
+    });
+  });
+
+  function applyLayers() {
+    var key = activeIRITab==='2026' ? 'yr2026' : 'all';
+    var lyr = iriLayers[mode][key];
+    if (lyr) {
+      lyr.addTo(map);
+      var b = lyr.getBounds();
+      if (b && b.isValid()) map.fitBounds(b, { padding:[50,50] });
+    }
+    // Clinton always goes on top (if loaded and toggled on)
+    if (clintonOn && clintonLayer && !map.hasLayer(clintonLayer)) clintonLayer.addTo(map);
+  }
+
+  if (!iriLayers[mode].all) {
+    fetchIRI(mode, function(data) { buildIRILayers(data, mode); applyLayers(); });
+  } else {
+    applyLayers();
+  }
+}
+
+// ─────────────────────────────────────────────
+//  MODE TOGGLE  Whole ↔ Segment
+// ─────────────────────────────────────────────
+function setMode(mode) {
+  if (mode===currentMode) return;
+  currentMode = mode;
+  document.getElementById('modeWhole').classList.toggle('active', mode==='whole');
+  document.getElementById('modeSeg').classList.toggle('active',   mode==='segment');
+  syncTabColors();
+  renderMap();
+  closeInfo();
+}
+
+// ─────────────────────────────────────────────
+//  IRI RADIO TABS  (mutually exclusive)
+// ─────────────────────────────────────────────
+function setIRI(name) {
+  if (activeIRITab===name) return;   // already selected — do nothing
+  activeIRITab = name;
+  syncTabColors();
+  renderMap();
+  closeInfo();
+}
+
+// ─────────────────────────────────────────────
+//  CLINTON TOGGLE  (independent on/off)
+// ─────────────────────────────────────────────
+function toggleClinton() {
+  clintonOn = !clintonOn;
+  document.getElementById('tab-clinton').classList.toggle('clinton-on', clintonOn);
+
+  if (!clintonOn) {
+    if (clintonLayer && map.hasLayer(clintonLayer)) map.removeLayer(clintonLayer);
+    return;
+  }
+  // Turning on — fetch if not yet loaded, then show
+  if (clintonLayer) {
+    if (!map.hasLayer(clintonLayer)) clintonLayer.addTo(map);
+  } else {
+    fetchClinton(function() { if (clintonOn && !map.hasLayer(clintonLayer)) clintonLayer.addTo(map); });
+  }
+}
+
+// ─────────────────────────────────────────────
+//  SYNC TAB BUTTON COLOURS
+// ─────────────────────────────────────────────
+function syncTabColors() {
+  var isSeg = currentMode==='segment';
+  ['all','2026'].forEach(function(t) {
+    var btn = document.getElementById('tab-'+t);
+    var on  = activeIRITab===t;
+    btn.classList.toggle('iri-on',   on);
+    btn.classList.toggle('seg-mode', on && isSeg);
+  });
+  // Clinton button: orange always (independent of IRI mode)
+  // no change needed here — clinton-on class is only toggled by toggleClinton()
+}
+
+// ─────────────────────────────────────────────
+//  STARTUP — auto-load whole IRI + Clinton
+// ─────────────────────────────────────────────
+// Fetch Clinton in parallel (it's fast, local file)
+fetchClinton(function() {
+  if (clintonOn && !map.hasLayer(clintonLayer)) clintonLayer.addTo(map);
+});
+// Fetch + show whole IRI (IRI All selected by default)
+syncTabColors();
+renderMap();
+
+// ─────────────────────────────────────────────
+//  GPS
+// ─────────────────────────────────────────────
+var gpsActive=false, gpsWatchId=null, gpsMarker=null, gpsCircle=null, gpsFollowing=false;
+var gpsStatusEl = document.getElementById('gpsStatus');
+var gpsBtnEl    = document.getElementById('gpsBtn');
+
+function showGPSStatus(msg,dur){ gpsStatusEl.textContent=msg; gpsStatusEl.classList.add('visible'); if(dur) setTimeout(function(){gpsStatusEl.classList.remove('visible');},dur); }
+function hideGPSStatus(){ gpsStatusEl.classList.remove('visible'); }
+function toggleGPS(){ gpsActive ? stopGPS() : startGPS(); }
+
+function startGPS(){
+  if(!navigator.geolocation){ showGPSStatus('GPS not supported',3000); return; }
+  gpsActive=true; gpsFollowing=true;
+  gpsBtnEl.classList.add('searching');
+  showGPSStatus('📡 Searching for GPS signal…');
+  gpsWatchId=navigator.geolocation.watchPosition(onGPSSuccess,onGPSError,{enableHighAccuracy:true,maximumAge:5000,timeout:15000});
+}
+function stopGPS(){
+  gpsActive=false; gpsFollowing=false;
+  if(gpsWatchId!==null){navigator.geolocation.clearWatch(gpsWatchId);gpsWatchId=null;}
+  if(gpsMarker){map.removeLayer(gpsMarker);gpsMarker=null;}
+  if(gpsCircle){map.removeLayer(gpsCircle);gpsCircle=null;}
+  gpsBtnEl.classList.remove('active','searching');
+  hideGPSStatus();
+}
+function onGPSSuccess(pos){
+  var lat=pos.coords.latitude,lng=pos.coords.longitude,acc=pos.coords.accuracy;
+  gpsBtnEl.classList.remove('searching'); gpsBtnEl.classList.add('active');
+  showGPSStatus('📍 Accuracy: ~'+Math.round(acc)+'m',3000);
+  if(gpsCircle) map.removeLayer(gpsCircle);
+  gpsCircle=L.circle([lat,lng],{radius:acc,color:'#1a6ef5',fillColor:'#1a6ef5',fillOpacity:0.08,weight:1,className:'leaflet-gps-accuracy'}).addTo(map);
+  if(gpsMarker) map.removeLayer(gpsMarker);
+  var icon=L.divIcon({className:'',html:'<div class="gps-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]});
+  gpsMarker=L.marker([lat,lng],{icon:icon,zIndexOffset:1000}).addTo(map)
+    .bindPopup('<b>You are here</b><br>Accuracy: ~'+Math.round(acc)+'m<br>'+lat.toFixed(5)+', '+lng.toFixed(5));
+  if(gpsFollowing){map.setView([lat,lng],Math.max(map.getZoom(),14));gpsFollowing=false;}
+}
+function onGPSError(err){
+  gpsBtnEl.classList.remove('searching','active'); gpsActive=false;
+  var msgs={1:'Location permission denied.',2:'GPS signal unavailable.',3:'GPS timed out.'};
+  showGPSStatus('⚠️ '+(msgs[err.code]||'GPS error'),4000);
+}
+map.on('dragstart',function(){gpsFollowing=false;});
+document.getElementById('gpsBtn').addEventListener('click',function(){
+  if(gpsActive&&gpsMarker){gpsFollowing=true;map.setView(gpsMarker.getLatLng(),Math.max(map.getZoom(),14));}
+});
 </script>
-
 </body>
 </html>

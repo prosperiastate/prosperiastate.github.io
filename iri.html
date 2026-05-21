@@ -131,6 +131,17 @@
   .spinner { width:12px; height:12px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.7s linear infinite; flex-shrink:0; }
   .spinner.seg { border-top-color: var(--accent2); }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* AUTHOR ATTRIBUTION */
+  #authorAttrib {
+    display: block; text-align: right;
+    font-size: 12px; color: var(--text); font-weight: 500;
+    padding: 1px 6px 3px;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(4px);
+  }
+  #authorAttrib a { color: var(--accent); text-decoration: none; font-size: 12px; }
+  #authorAttrib a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -163,16 +174,16 @@
 
 <div id="panel">
   <div id="layerTabs">
-    <button class="tab-btn iri-on"     id="tab-all"     onclick="setIRI('all')">IRI All</button>
-    <button class="tab-btn"            id="tab-2026"    onclick="setIRI('2026')">IRI 2026</button>
+    <button class="tab-btn iri-on" id="tab-all"     onclick="setIRI('all')">IRI All</button>
+    <button class="tab-btn"        id="tab-2026"    onclick="setIRI('2026')">IRI 2026</button>
     <button class="tab-btn clinton-on" id="tab-clinton" onclick="toggleClinton()">Clinton Co.</button>
   </div>
   <div id="legendScroll">
-    <div class="legend-chip"><div class="legend-dot" style="background:#2E7D32"></div>Excellent &lt;85</div>
-    <div class="legend-chip"><div class="legend-dot" style="background:#8BC34A"></div>Good 85–105</div>
-    <div class="legend-chip"><div class="legend-dot" style="background:#FFFF00"></div>Fair 105–125</div>
-    <div class="legend-chip"><div class="legend-dot" style="background:#FF9800"></div>Acceptable 125–145</div>
-    <div class="legend-chip"><div class="legend-dot" style="background:#D32F2F"></div>Bad &gt;145</div>
+    <div class="legend-chip"><div class="legend-dot" style="background:#2E7D32"></div><span id="leg-excellent">Excellent</span></div>
+    <div class="legend-chip"><div class="legend-dot" style="background:#8BC34A"></div><span id="leg-good">Good</span></div>
+    <div class="legend-chip"><div class="legend-dot" style="background:#FFFF00"></div><span id="leg-fair">Fair</span></div>
+    <div class="legend-chip"><div class="legend-dot" style="background:#FF9800"></div><span id="leg-acceptable">Acceptable</span></div>
+    <div class="legend-chip"><div class="legend-dot" style="background:#D32F2F"></div><span id="leg-bad">Bad</span></div>
     <div class="legend-chip"><div class="legend-line" style="background:#FF00FF"></div>Primary</div>
     <div class="legend-chip"><div class="legend-line" style="background:#00FFFF"></div>Secondary</div>
   </div>
@@ -189,10 +200,80 @@ var URLS = {
 };
 
 // ─────────────────────────────────────────────
+//  IRI THRESHOLDS BY ROAD TYPE
+// ─────────────────────────────────────────────
+var IRI_THRESHOLDS = {
+  highway:     [65,  85,  105, 125],
+  county_road: [85,  105, 125, 145],
+  city_street: [105, 125, 145, 170],
+  default:     [85,  105, 125, 145]
+};
+var LEGEND_LABELS = {
+  highway:     ['<65','65–85','85–105','105–125','>125'],
+  county_road: ['<85','85–105','105–125','125–145','>145'],
+  city_street: ['<105','105–125','125–145','145–170','>170'],
+  default:     ['<85','85–105','105–125','125–145','>145']
+};
+
+function getRoadTypeKey(roadType) {
+  if (!roadType) return 'default';
+  var t = roadType.toLowerCase().replace(/ /g,'_');
+  if (t.indexOf('highway') >= 0) return 'highway';
+  if (t.indexOf('county')  >= 0) return 'county_road';
+  if (t.indexOf('city')    >= 0 || t.indexOf('street') >= 0) return 'city_street';
+  return 'default';
+}
+
+function classifyIRI(iriInMi, roadType) {
+  var t = IRI_THRESHOLDS[getRoadTypeKey(roadType)];
+  if (iriInMi < t[0]) return 'Excellent';
+  if (iriInMi < t[1]) return 'Good';
+  if (iriInMi < t[2]) return 'Fair';
+  if (iriInMi < t[3]) return 'Acceptable';
+  return 'Bad';
+}
+
+// ─────────────────────────────────────────────
+//  LEGEND
+// ─────────────────────────────────────────────
+var currentLegendType = null;
+var LEGEND_NAMES = ['Excellent','Good','Fair','Acceptable','Bad'];
+var LEGEND_IDS   = ['excellent','good','fair','acceptable','bad'];
+
+function updateLegend(roadType) {
+  var key = getRoadTypeKey(roadType);
+  if (key === currentLegendType) return;
+  currentLegendType = key;
+  var labels = LEGEND_LABELS[key];
+  LEGEND_IDS.forEach(function(id, i) {
+    document.getElementById('leg-'+id).textContent =
+      roadType ? LEGEND_NAMES[i]+' '+labels[i] : LEGEND_NAMES[i];
+  });
+}
+
+function resetLegend() {
+  currentLegendType = null;
+  LEGEND_IDS.forEach(function(id, i) {
+    document.getElementById('leg-'+id).textContent = LEGEND_NAMES[i];
+  });
+}
+
+// ─────────────────────────────────────────────
 //  MAP INIT
 // ─────────────────────────────────────────────
 var map = L.map('map', { center:[42.05,-93.5], zoom:8, zoomControl:true, tap:true, tapTolerance:20 });
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(map);
+
+// Author tag below Leaflet attribution
+map.whenReady(function() {
+  var attribEl = document.querySelector('.leaflet-control-attribution');
+  if (attribEl) {
+    var d = document.createElement('div');
+    d.id = 'authorAttrib';
+    d.innerHTML = 'Abdullah Sourav &middot; <a href="mailto:sourav@iastate.edu">sourav@iastate.edu</a>';
+    attribEl.parentNode.insertBefore(d, attribEl.nextSibling);
+  }
+});
 
 var isMobile = window.matchMedia('(max-width:768px)').matches;
 var BASE_W   = isMobile ? 10 : 5;
@@ -200,24 +281,16 @@ var HOVER_W  = isMobile ? 16 : 9;
 
 // ─────────────────────────────────────────────
 //  STATE
-//  currentMode  : 'whole' | 'segment'
-//  activeIRITab : 'all'   | '2026'     ← mutually exclusive radio
-//  clintonOn    : true | false          ← independent toggle
+//  iriAllOn / iri2026On : independent — both can be off,
+//  but turning one ON flips the other OFF (mutually exclusive when active)
 // ─────────────────────────────────────────────
-var currentMode  = 'whole';
-var activeIRITab = 'all';
-var clintonOn    = true;   // ON by default — auto-loaded at startup
+var currentMode = 'whole';
+var iriAllOn    = true;
+var iri2026On   = false;
+var clintonOn   = true;
 
-// Raw GeoJSON cache (avoid re-fetching)
-var geoCache = { whole: null, segment: null };
-
-// Built Leaflet layers per mode
-var iriLayers = {
-  whole:   { all: null, yr2026: null },
-  segment: { all: null, yr2026: null }
-};
-
-// Clinton: one layer, fetched once, always the same regardless of IRI mode
+var geoCache  = { whole: null, segment: null };
+var iriLayers = { whole: { all: null, yr2026: null }, segment: { all: null, yr2026: null } };
 var clintonLayer = null;
 
 // ─────────────────────────────────────────────
@@ -248,7 +321,7 @@ function hideLoading() { loadingToast.classList.remove('visible'); }
 // ─────────────────────────────────────────────
 //  INFO PANEL
 // ─────────────────────────────────────────────
-function showInfo(title, rows, mode) {
+function showInfo(title, rows, mode, roadType) {
   var el = document.getElementById('infoMode');
   el.className = mode === 'segment' ? 'seg' : 'whole';
   el.textContent = mode === 'segment' ? 'Segment' : 'Whole Road';
@@ -263,15 +336,24 @@ function showInfo(title, rows, mode) {
     g.appendChild(k); g.appendChild(v);
   });
   document.getElementById('infoPanel').classList.add('visible');
+  updateLegend(roadType);
 }
-function closeInfo() { document.getElementById('infoPanel').classList.remove('visible'); }
+function closeInfo() {
+  document.getElementById('infoPanel').classList.remove('visible');
+  resetLegend();
+}
 map.on('click', closeInfo);
 
 // ─────────────────────────────────────────────
-//  IRI LAYER STYLE + INTERACTION
+//  IRI STYLE + INTERACTION
 // ─────────────────────────────────────────────
 function iriStyle(f) {
-  return { color: f.properties.color_hex || getIRIColor(f.properties.iri_class), weight: BASE_W, opacity: 0.9 };
+  var p = f.properties;
+  var iri = p.iri_in_mi != null ? p.iri_in_mi : p.whole_iri_in_mi;
+  var color = (iri != null)
+    ? getIRIColor(classifyIRI(+iri, p.road_type))
+    : (p.color_hex || getIRIColor(p.iri_class));
+  return { color: color, weight: BASE_W, opacity: 0.9 };
 }
 
 function bindIRI(feature, layer, getParent, mode) {
@@ -290,34 +372,37 @@ function bindIRI(feature, layer, getParent, mode) {
       else if (p.speed!=null)
         spd = (Math.round(p.speed*0.621371*10)/10)+' mph / '+p.speed+' km/h';
 
+      var iriVal   = mode==='segment' ? p.iri_in_mi : p.whole_iri_in_mi;
+      var iriClass = (iriVal != null) ? classifyIRI(+iriVal, p.road_type) : safe(p.iri_class);
+
       var rows = mode==='segment' ? [
-        ['IRI Class',  safe(p.iri_class),              true],
-        ['Seg IRI',    safe(p.iri_in_mi)+' in/mi',     false],
-        ['Whole IRI',  safe(p.whole_iri_in_mi)+' in/mi',false],
-        ['Seg Length', safe(p.seg_len_mi)+' mi',        false],
-        ['Road Length', safe(p.whole_len_mi)+' mi',   false],
-        ['Speed',      spd,                            false],
-        ['Direction',  safe(p.direction),              false],
-        ['Surface',    safe(p.surface),                false],
-        ['Collected',  safe(p.collect_dt),             false]
+        ['IRI Class',   iriClass,                         true],
+        ['Seg IRI',     safe(p.iri_in_mi)+' in/mi',       false],
+        ['Whole IRI',   safe(p.whole_iri_in_mi)+' in/mi', false],
+        ['Seg Length',  safe(p.seg_len_mi)+' mi',          false],
+        ['Road Length', safe(p.whole_len_mi)+' mi',        false],
+        ['Speed',       spd,                               false],
+        ['Direction',   safe(p.direction),                 false],
+        ['Surface',     safe(p.surface),                   false],
+        ['Collected',   safe(p.collect_dt),                false]
       ] : [
-        ['IRI Class',   safe(p.iri_class),               true],
-        ['Road IRI',    safe(p.whole_iri_in_mi)+' in/mi',false],
-        ['Road Length', safe(p.whole_len_mi)+' mi',       false],
-        ['Speed',       spd,                             false],
-        ['Direction',   safe(p.direction),               false],
-        ['Surface',     safe(p.surface),                 false],
-        ['Road Type',   safe(p.road_type),               false],
-        ['Segments',    safe(p.n_segments),              false],
-        ['Collected',   safe(p.collect_dt),              false]
+        ['IRI Class',   iriClass,                         true],
+        ['Road IRI',    safe(p.whole_iri_in_mi)+' in/mi', false],
+        ['Road Length', safe(p.whole_len_mi)+' mi',        false],
+        ['Speed',       spd,                               false],
+        ['Direction',   safe(p.direction),                 false],
+        ['Surface',     safe(p.surface),                   false],
+        ['Road Type',   safe(p.road_type),                 false],
+        ['Segments',    safe(p.n_segments),                false],
+        ['Collected',   safe(p.collect_dt),                false]
       ];
-      showInfo(safe(p.road_id)+(p.road_type?' · '+p.road_type:''), rows, mode);
+      showInfo(safe(p.road_id)+(p.road_type?' · '+p.road_type:''), rows, mode, p.road_type);
     }
   });
 }
 
 // ─────────────────────────────────────────────
-//  BUILD IRI LAYERS FOR ONE MODE
+//  BUILD IRI LAYERS
 // ─────────────────────────────────────────────
 function buildIRILayers(data, mode) {
   var allLyr, yr2026Lyr;
@@ -335,7 +420,7 @@ function buildIRILayers(data, mode) {
 }
 
 // ─────────────────────────────────────────────
-//  FETCH IRI GEOJSON (cached)
+//  FETCH IRI (cached)
 // ─────────────────────────────────────────────
 function fetchIRI(mode, cb) {
   if (geoCache[mode]) { cb(geoCache[mode]); return; }
@@ -348,7 +433,7 @@ function fetchIRI(mode, cb) {
 }
 
 // ─────────────────────────────────────────────
-//  CLINTON — fetched once, independent overlay
+//  CLINTON
 // ─────────────────────────────────────────────
 function fetchClinton(cb) {
   if (clintonLayer) { cb(); return; }
@@ -373,7 +458,7 @@ function fetchClinton(cb) {
               showInfo(
                 safe(p.FULL_NAME||p.Name||'Clinton County Road'),
                 [['Class', safe(p.Road), false], ['Type', safe(p.ROAD_TYPE), false]],
-                'whole'
+                'whole', null
               );
             }
           });
@@ -386,39 +471,38 @@ function fetchClinton(cb) {
 
 // ─────────────────────────────────────────────
 //  RENDER MAP
-//  Remove old IRI layers → add correct IRI layer → add Clinton if on
 // ─────────────────────────────────────────────
-function renderMap() {
+function renderMap(fitView) {
   var mode = currentMode;
 
-  // Remove all IRI layers
   ['whole','segment'].forEach(function(m) {
     ['all','yr2026'].forEach(function(k) {
-      var l = iriLayers[m][k];
-      if (l && map.hasLayer(l)) map.removeLayer(l);
+      var l = iriLayers[m][k]; if (l && map.hasLayer(l)) map.removeLayer(l);
     });
   });
 
-  function applyLayers(fitView) {
-    var key = activeIRITab==='2026' ? 'yr2026' : 'all';
-    var lyr = iriLayers[mode][key];
-    if (lyr) {
-      lyr.addTo(map);
-      if (fitView) {
-        var b = lyr.getBounds();
-        if (b && b.isValid()) map.fitBounds(b, { padding:[50,50] });
+  function applyLayers() {
+    if (iriAllOn) {
+      var lyr = iriLayers[mode].all;
+      if (lyr) {
+        lyr.addTo(map);
+        if (fitView) { var b=lyr.getBounds(); if(b&&b.isValid()) map.fitBounds(b,{padding:[50,50]}); }
       }
     }
-    // Clinton always goes on top (if loaded and toggled on)
+    if (iri2026On) {
+      var lyr2 = iriLayers[mode].yr2026;
+      if (lyr2) {
+        lyr2.addTo(map);
+        if (fitView) { var b2=lyr2.getBounds(); if(b2&&b2.isValid()) map.fitBounds(b2,{padding:[50,50]}); }
+      }
+    }
     if (clintonOn && clintonLayer && !map.hasLayer(clintonLayer)) clintonLayer.addTo(map);
   }
 
   if (!iriLayers[mode].all) {
-    // First fetch for this mode — fit view once data arrives
-    fetchIRI(mode, function(data) { buildIRILayers(data, mode); applyLayers(true); });
+    fetchIRI(mode, function(data) { buildIRILayers(data, mode); applyLayers(); });
   } else {
-    // Data already cached — keep current zoom/pan
-    applyLayers(false);
+    applyLayers();
   }
 }
 
@@ -431,33 +515,36 @@ function setMode(mode) {
   document.getElementById('modeWhole').classList.toggle('active', mode==='whole');
   document.getElementById('modeSeg').classList.toggle('active',   mode==='segment');
   syncTabColors();
-  renderMap();
+  renderMap(!iriLayers[mode].all);  // fit only if this mode hasn't been loaded yet
   closeInfo();
 }
 
 // ─────────────────────────────────────────────
-//  IRI RADIO TABS  (mutually exclusive)
+//  IRI TABS — both can be off; turning one on turns the other off
 // ─────────────────────────────────────────────
 function setIRI(name) {
-  if (activeIRITab===name) return;   // already selected — do nothing
-  activeIRITab = name;
+  if (name === 'all') {
+    iriAllOn  = !iriAllOn;
+    if (iriAllOn) iri2026On = false;
+  } else {
+    iri2026On  = !iri2026On;
+    if (iri2026On) iriAllOn = false;
+  }
   syncTabColors();
-  renderMap();
+  renderMap(false);   // never re-fit on tab switch
   closeInfo();
 }
 
 // ─────────────────────────────────────────────
-//  CLINTON TOGGLE  (independent on/off)
+//  CLINTON TOGGLE
 // ─────────────────────────────────────────────
 function toggleClinton() {
   clintonOn = !clintonOn;
   document.getElementById('tab-clinton').classList.toggle('clinton-on', clintonOn);
-
   if (!clintonOn) {
     if (clintonLayer && map.hasLayer(clintonLayer)) map.removeLayer(clintonLayer);
     return;
   }
-  // Turning on — fetch if not yet loaded, then show
   if (clintonLayer) {
     if (!map.hasLayer(clintonLayer)) clintonLayer.addTo(map);
   } else {
@@ -466,30 +553,26 @@ function toggleClinton() {
 }
 
 // ─────────────────────────────────────────────
-//  SYNC TAB BUTTON COLOURS
+//  SYNC TAB COLOURS
 // ─────────────────────────────────────────────
 function syncTabColors() {
   var isSeg = currentMode==='segment';
-  ['all','2026'].forEach(function(t) {
-    var btn = document.getElementById('tab-'+t);
-    var on  = activeIRITab===t;
-    btn.classList.toggle('iri-on',   on);
-    btn.classList.toggle('seg-mode', on && isSeg);
-  });
-  // Clinton button: orange always (independent of IRI mode)
-  // no change needed here — clinton-on class is only toggled by toggleClinton()
+  var btnAll  = document.getElementById('tab-all');
+  var btn2026 = document.getElementById('tab-2026');
+  btnAll.classList.toggle('iri-on',    iriAllOn);
+  btnAll.classList.toggle('seg-mode',  iriAllOn  && isSeg);
+  btn2026.classList.toggle('iri-on',   iri2026On);
+  btn2026.classList.toggle('seg-mode', iri2026On && isSeg);
 }
 
 // ─────────────────────────────────────────────
-//  STARTUP — auto-load whole IRI + Clinton
+//  STARTUP
 // ─────────────────────────────────────────────
-// Fetch Clinton in parallel (it's fast, local file)
 fetchClinton(function() {
   if (clintonOn && !map.hasLayer(clintonLayer)) clintonLayer.addTo(map);
 });
-// Fetch + show whole IRI (IRI All selected by default)
 syncTabColors();
-renderMap();
+renderMap(true);   // fit on first load only
 
 // ─────────────────────────────────────────────
 //  GPS

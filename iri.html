@@ -131,6 +131,23 @@
   .spinner { width:12px; height:12px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.7s linear infinite; flex-shrink:0; }
   .spinner.seg { border-top-color: var(--accent2); }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* AUTHOR ATTRIBUTION */
+  .leaflet-bottom.leaflet-right { padding-bottom: 2px; }
+  .leaflet-control-attribution {
+    background: rgba(255,255,255,0.85) !important;
+    backdrop-filter: blur(4px);
+  }
+  #authorAttrib {
+    display: block; text-align: right;
+    font-size: 12px; color: var(--text);
+    font-weight: 500;
+    padding: 1px 6px 3px;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(4px);
+  }
+  #authorAttrib a { color: var(--accent); text-decoration: none; font-size: 12px; }
+  #authorAttrib a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -185,7 +202,7 @@
 var URLS = {
   whole:   'https://pub-256928d690cc446c84032baa7343824c.r2.dev/website/iri_whole.geojson',
   segment: 'https://pub-256928d690cc446c84032baa7343824c.r2.dev/website/iri_segments.geojson',
-  clinton: 'https://pub-256928d690cc446c84032baa7343824c.r2.dev/website/Clinton_roads.geojson'
+  clinton: 'https://pub-256928d690cc446c84032baa7343824c.r2.dev/website/Clinton_05212026.geojson'
 };
 
 // ─────────────────────────────────────────────
@@ -193,6 +210,17 @@ var URLS = {
 // ─────────────────────────────────────────────
 var map = L.map('map', { center:[42.05,-93.5], zoom:8, zoomControl:true, tap:true, tapTolerance:20 });
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(map);
+
+// Author tag appended below the Leaflet attribution
+(function() {
+  var attribEl = document.querySelector('.leaflet-control-attribution');
+  if (attribEl) {
+    var d = document.createElement('div');
+    d.id = 'authorAttrib';
+    d.innerHTML = 'Abdullah Sourav &middot; <a href="mailto:sourav@iastate.edu">sourav@iastate.edu</a>';
+    attribEl.parentNode.insertBefore(d, attribEl.nextSibling);
+  }
+})();
 
 var isMobile = window.matchMedia('(max-width:768px)').matches;
 var BASE_W   = isMobile ? 10 : 5;

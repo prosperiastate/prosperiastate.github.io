@@ -98,27 +98,34 @@
   .legend-dot  { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
   .legend-line { width: 20px; height: 4px; border-radius: 2px; flex-shrink: 0; }
 
-  /* INFO PANEL */
-  #infoPanel {
-    position: absolute; bottom: calc(var(--panel-h) + 8px); left: 10px; right: 10px;
-    z-index: 950; background: #fff; border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 14px 16px; font-size: 13px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.11); display: none; animation: slideUp 0.2s ease;
+  /* LEAFLET POPUP — compact, auto-sized */
+  .leaflet-popup-content-wrapper {
+    border-radius: var(--radius) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.13) !important;
+    padding: 0 !important;
+    font-family: 'DM Sans', sans-serif !important;
+    min-width: 200px; max-width: 280px;
   }
-  @keyframes slideUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-  #infoPanel.visible { display: block; }
-  #infoPanelClose {
-    position: absolute; top: 10px; right: 12px; background: none; border: none;
-    color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1;
+  .leaflet-popup-content {
+    margin: 0 !important; padding: 13px 15px !important;
+    font-size: 13px; color: var(--text);
   }
-  #infoTitle { font-weight: 600; font-size: 14px; margin-bottom: 8px; padding-right: 24px; }
-  #infoGrid  { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; }
-  .info-key  { color: var(--muted); }
+  .leaflet-popup-tip-container { margin-top: -1px; }
+  .leaflet-popup-tip { background: #fff !important; box-shadow: none !important; }
+  .leaflet-popup-close-button {
+    top: 8px !important; right: 10px !important;
+    color: var(--muted) !important; font-size: 18px !important;
+    width: 20px !important; height: 20px !important; line-height: 20px !important;
+  }
+  .popup-mode { display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; padding: 2px 7px; border-radius: 999px; margin-bottom: 6px; text-transform: uppercase; }
+  .popup-mode.whole { background: rgba(26,110,245,0.1); color: var(--accent); }
+  .popup-mode.seg   { background: rgba(124,58,237,0.1); color: var(--accent2); }
+  .popup-title { font-weight: 600; font-size: 13px; margin-bottom: 7px; padding-right: 16px; line-height: 1.3; }
+  .popup-grid  { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; }
+  .info-key  { color: var(--muted); font-size: 12px; }
   .info-val  { color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; }
   .iri-badge { display: inline-block; border-radius: 999px; padding: 1px 9px; font-size: 11px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
-  #infoMode  { display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; padding: 2px 7px; border-radius: 999px; margin-bottom: 6px; text-transform: uppercase; }
-  #infoMode.whole { background: rgba(26,110,245,0.1); color: var(--accent); }
-  #infoMode.seg   { background: rgba(124,58,237,0.1); color: var(--accent2); }
 
   /* GPS */
   .gps-dot { width:18px; height:18px; background:var(--accent); border:3px solid #fff; border-radius:50%; box-shadow:0 0 0 6px rgba(26,110,245,0.2); animation:pulse 2s infinite; }
@@ -170,12 +177,6 @@
 <div id="gpsStatus"></div>
 <div id="loadingToast"><div class="spinner" id="spinnerEl"></div><span id="loadingMsg">Loading…</span></div>
 
-<div id="infoPanel">
-  <button id="infoPanelClose" onclick="closeInfo()">×</button>
-  <div id="infoMode" class="whole">Whole Road</div>
-  <div id="infoTitle">—</div>
-  <div id="infoGrid"></div>
-</div>
 
 <div id="panel">
   <div id="layerTabs">
@@ -331,30 +332,34 @@ function showLoading(msg, isSeg) {
 function hideLoading() { loadingToast.classList.remove('visible'); }
 
 // ─────────────────────────────────────────────
-//  INFO PANEL
+//  INFO POPUP  (Leaflet popup anchored to click point)
 // ─────────────────────────────────────────────
-function showInfo(title, rows, mode, roadType) {
-  var el = document.getElementById('infoMode');
-  el.className = mode === 'segment' ? 'seg' : 'whole';
-  el.textContent = mode === 'segment' ? 'Segment' : 'Whole Road';
-  document.getElementById('infoTitle').textContent = title;
-  var g = document.getElementById('infoGrid');
-  g.innerHTML = '';
+var infoPopup = L.popup({ maxWidth: 280, minWidth: 200, autoPan: true, autoPanPadding: [20, 20], className: '' });
+
+function showInfo(latlng, title, rows, mode, roadType) {
+  var modeClass = mode === 'segment' ? 'seg' : 'whole';
+  var modeLabel = mode === 'segment' ? 'Segment' : 'Whole Road';
+  var html = '<div class="popup-mode '+modeClass+'">'+modeLabel+'</div>'
+           + '<div class="popup-title">'+title+'</div>'
+           + '<div class="popup-grid">';
   rows.forEach(function(r) {
-    var k = document.createElement('div'); k.className='info-key'; k.textContent=r[0];
-    var v = document.createElement('div'); v.className='info-val';
-    if (r[2]) { var b=document.createElement('span'); b.className='iri-badge'; b.style.background=getIRIColor(r[1]); b.textContent=r[1]; v.appendChild(b); }
-    else { v.textContent = r[1]; }
-    g.appendChild(k); g.appendChild(v);
+    html += '<div class="info-key">'+r[0]+'</div><div class="info-val">';
+    if (r[2]) {
+      html += '<span class="iri-badge" style="background:'+getIRIColor(r[1])+'">'+r[1]+'</span>';
+    } else {
+      html += r[1];
+    }
+    html += '</div>';
   });
-  document.getElementById('infoPanel').classList.add('visible');
+  html += '</div>';
+  infoPopup.setLatLng(latlng).setContent(html).openOn(map);
   updateLegend(roadType);
 }
+
 function closeInfo() {
-  document.getElementById('infoPanel').classList.remove('visible');
+  if (map.hasLayer(infoPopup)) map.closePopup(infoPopup);
   resetLegend();
 }
-map.on('click', closeInfo);
 
 // ─────────────────────────────────────────────
 //  IRI STYLE + INTERACTION
@@ -408,7 +413,7 @@ function bindIRI(feature, layer, getParent, mode) {
         ['Segments',    safe(p.n_segments),                false],
         ['Collection Date',   safe(p.collect_dt),                false]
       ];
-      showInfo(safe(p.road_id)+(p.road_type?' · '+p.road_type:''), rows, mode, p.road_type);
+      showInfo(e.latlng, safe(p.road_id)+(p.road_type?' · '+p.road_type:''), rows, mode, p.road_type);
     }
   });
 }
@@ -468,6 +473,7 @@ function fetchClinton(cb) {
               layer.setStyle({ weight: isMobile?12:6 });
               setTimeout(function(){ if(clintonLayer) clintonLayer.resetStyle(layer); }, 800);
               showInfo(
+                e.latlng,
                 safe(p.FULL_NAME||p.Name||'Clinton County Road'),
                 [['Class', safe(p.Road), false], ['Type', safe(p.ROAD_TYPE), false]],
                 'whole', null

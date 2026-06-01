@@ -60,29 +60,6 @@
   #gpsBtn.searching { border-color: #f9a825; color: #f9a825; }
   #gpsBtn svg { width: 15px; height: 15px; flex-shrink: 0; }
 
-/*add start */
-/* SCALE BAR */
-.leaflet-bottom.leaflet-left {
-  bottom: var(--panel-h) !important;
-  padding: 0 0 8px 10px;
-}
-.leaflet-control-scale-line {
-  background: rgba(255,255,255,0.92) !important;
-  border: 1px solid var(--border) !important;
-  border-top: 2px solid var(--text) !important;
-  color: var(--text) !important;
-  font-family: 'DM Mono', monospace !important;
-  font-size: 11px !important;          /* ← bump from 10px */
-  padding: 3px 8px !important;         /* ← more padding */
-  border-radius: 0 0 4px 4px !important;
-  min-width: 100px;                    /* ← prevent tiny bar */
-}
- .leaflet-bottom.leaflet-right {
-  bottom: var(--panel-h) !important;
-  padding: 0 10px 8px 0;
-}
-
-/* add ends */
   /* ZOOM */
   .leaflet-top.leaflet-left { top: 10px !important; }
   .leaflet-control-zoom { border: 1px solid var(--border) !important; background: #fff !important; box-shadow: 0 2px 8px rgba(0,0,0,0.10) !important; }
@@ -299,8 +276,7 @@ function resetLegend() {
 // ─────────────────────────────────────────────
 var map = L.map('map', { center:[42.05,-93.5], zoom:8, zoomControl:true, tap:true, tapTolerance:20 });
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(map);
-L.control.scale({ position: 'bottomright', imperial: true, metric: true, maxWidth: 150 }).addTo(map);
- 
+
 // Author tag below Leaflet attribution
 map.whenReady(function() {
   var attribEl = document.querySelector('.leaflet-control-attribution');

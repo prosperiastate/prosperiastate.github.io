@@ -61,7 +61,7 @@
   #gpsBtn svg { width: 15px; height: 15px; flex-shrink: 0; }
 
 /*add start */
- /* SCALE BAR */
+/* SCALE BAR */
 .leaflet-bottom.leaflet-left {
   bottom: var(--panel-h) !important;
   padding: 0 0 8px 10px;
@@ -72,11 +72,14 @@
   border-top: 2px solid var(--text) !important;
   color: var(--text) !important;
   font-family: 'DM Mono', monospace !important;
-  font-size: 10px !important;
-  padding: 2px 6px !important;
+  font-size: 11px !important;          /* ← bump from 10px */
+  padding: 3px 8px !important;         /* ← more padding */
   border-radius: 0 0 4px 4px !important;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08) !important;
+  min-width: 100px;                    /* ← prevent tiny bar */
+}
+ .leaflet-bottom.leaflet-right {
+  bottom: var(--panel-h) !important;
+  padding: 0 10px 8px 0;
 }
 
 /* add ends */
@@ -296,8 +299,7 @@ function resetLegend() {
 // ─────────────────────────────────────────────
 var map = L.map('map', { center:[42.05,-93.5], zoom:8, zoomControl:true, tap:true, tapTolerance:20 });
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(map);
-L.control.scale({ position: 'bottomleft', imperial: true, metric: true, maxWidth: 120 }).addTo(map);  // ← add here
-
+L.control.scale({ position: 'bottomright', imperial: true, metric: true, maxWidth: 150 }).addTo(map);
  
 // Author tag below Leaflet attribution
 map.whenReady(function() {

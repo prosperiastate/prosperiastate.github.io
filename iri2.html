@@ -15,7 +15,7 @@
   :root {
     --bg: #f5f6f8; --panel: #ffffff; --border: #dde0e8;
     --text: #1a1d27; --muted: #7a7f9a;
-    --accent: #1a6ef5; --accent2: #7c3aed; --clinton: #e67e00; --sb: #0d9488;
+    --accent: #1a6ef5; --accent2: #7c3aed; --clinton: #e67e00; --sb: #0d9488; --lee: #16a34a;
     --radius: 12px; --panel-h: 118px; --topbar-h: 48px;
   }
   html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
@@ -84,6 +84,7 @@
   .tab-btn.iri-on          { background: var(--accent);  border-color: var(--accent);  color: #fff; }
   .tab-btn.iri-on.seg-mode { background: var(--accent2); border-color: var(--accent2); }
   .tab-btn.clinton-on      { background: var(--clinton); border-color: var(--clinton); color: #fff; }
+  .tab-btn.lee-on          { background: var(--lee);     border-color: var(--lee);     color: #fff; }
 
   #legendScroll {
     flex: 1; overflow-x: auto; overflow-y: hidden; display: flex; align-items: center;
@@ -182,7 +183,8 @@
   <div id="layerTabs">
     <button class="tab-btn iri-on" id="tab-all"     onclick="setIRI('all')">IRI All</button>
     <button class="tab-btn"        id="tab-2026"    onclick="setIRI('2026')">IRI 2026</button>
-    <button class="tab-btn clinton-on" id="tab-clinton" onclick="toggleClinton()">Clinton Co.</button>
+    <button class="tab-btn clinton-on" id="tab-clinton" onclick="toggleClinton()">Clinton Co</button>
+    <button class="tab-btn"        id="tab-lee"    onclick="toggleLee()">Lee Co</button>
   </div>
   <div id="legendScroll">
     <div class="legend-chip"><div class="legend-dot" style="background:#2E7D32"></div><span id="leg-excellent">Excellent</span></div>
@@ -211,6 +213,8 @@ var URLS_SMARTBOX = {
 };
 var currentSource = 'cyroid';
 var URLS = URLS_CYROID;
+
+// Lee County data loaded via fetch('./lee_county.geojson')
 
 // ─────────────────────────────────────────────
 //  IRI THRESHOLDS BY ROAD TYPE
@@ -301,10 +305,12 @@ var currentMode = 'whole';
 var iriAllOn    = true;
 var iri2026On   = false;
 var clintonOn   = true;
+var leeOn       = false;
 
 var geoCache  = { whole: null, segment: null };
 var iriLayers = { whole: { all: null, yr2026: null }, segment: { all: null, yr2026: null } };
 var clintonLayer = null;
+var leeLayer     = null;
 
 // ─────────────────────────────────────────────
 //  HELPERS
@@ -515,6 +521,7 @@ function renderMap(fitView) {
       }
     }
     if (clintonOn && clintonLayer && !map.hasLayer(clintonLayer)) clintonLayer.addTo(map);
+    if (leeOn && leeLayer && !map.hasLayer(leeLayer)) leeLayer.addTo(map);
   }
 
   if (!iriLayers[mode].all) {
@@ -557,6 +564,8 @@ function setSource(src) {
 
   // Restore Clinton if it was on
   if (clintonOn && clintonLayer && !map.hasLayer(clintonLayer)) clintonLayer.addTo(map);
+  // Restore Lee if it was on
+  if (leeOn && leeLayer && !map.hasLayer(leeLayer)) leeLayer.addTo(map);
 
   syncSourceColors();
   renderMap(false);  // never re-fit on source toggle — preserve current zoom
@@ -604,6 +613,83 @@ function toggleClinton() {
 }
 
 // ─────────────────────────────────────────────
+//  LEE COUNTY TOGGLE
+// ─────────────────────────────────────────────
+function toggleLee() {
+  leeOn = !leeOn;
+  document.getElementById('tab-lee').classList.toggle('lee-on', leeOn);
+  if (!leeOn) {
+    if (leeLayer && map.hasLayer(leeLayer)) map.removeLayer(leeLayer);
+    return;
+  }
+  if (leeLayer) {
+    if (!map.hasLayer(leeLayer)) leeLayer.addTo(map);
+    zoomToLee();
+  } else {
+    buildLeeLayer(function() { if (leeOn && !map.hasLayer(leeLayer)) { leeLayer.addTo(map); zoomToLee(); } });
+  }
+}
+
+function zoomToLee() {
+  if (leeLayer) {
+    var b = leeLayer.getBounds();
+    if (b && b.isValid()) map.fitBounds(b, { padding: [40, 40] });
+  }
+}
+
+function getLeeRoadColor(system) {
+  // SYSTEM 1 = Primary (magenta), 0 or 2 = Secondary (cyan)
+  return system === 1 ? '#FF00FF' : '#00FFFF';
+}
+
+function buildLeeLayer(cb) {
+  if (leeLayer) { cb(); return; }
+  showLoading('Loading Lee County roads…', false);
+  fetch('https://pub-256928d690cc446c84032baa7343824c.r2.dev/website/lee_county.geojson')
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(data) {
+      hideLoading();
+      leeLayer = L.geoJSON(data, {
+        style: function(f) {
+          var sys = f.properties.SYSTEM;
+          return { color: getLeeRoadColor(sys), weight: isMobile ? 6 : 3, opacity: 0.9 };
+        },
+        onEachFeature: function(feature, layer) {
+          var p = feature.properties;
+          var roadTypeLabel = p.SYSTEM === 1 ? 'Primary' : 'Secondary';
+          var routeLabel = p.ROUTE_ID || p.RoadName || p.Name || 'Lee County Road';
+          layer.on({
+            mouseover: function(e) { e.target.setStyle({ weight: isMobile ? 12 : 6 }); },
+            mouseout:  function(e) { if (leeLayer) leeLayer.resetStyle(e.target); },
+            click: function(e) {
+              L.DomEvent.stopPropagation(e);
+              layer.setStyle({ weight: isMobile ? 12 : 6 });
+              setTimeout(function() { if (leeLayer) leeLayer.resetStyle(layer); }, 800);
+              showInfo(
+                e.latlng,
+                routeLabel,
+                [
+                  ['Road Type', roadTypeLabel, false],
+                  ['Route',     safe(p.ROUTE),       false],
+                  ['IRI',       safe(p.IRI) + (p.IRI != null && p.IRI !== '' ? ' in/mi' : ''), false],
+                  ['IRI Index', safe(p.IRI_INDX),   false],
+                  ['Speed',     safe(p.SPEED) + (p.SPEED ? ' mph' : ''), false],
+                  ['Lanes',     safe(p.LANES),       false],
+                  ['Length',    safe(p.PMIS_LENGT) + (p.PMIS_LENGT != null ? ' mi' : ''), false],
+                  ['Year',      safe(p.PMISYR),      false]
+                ],
+                'whole', null
+              );
+            }
+          });
+        }
+      });
+      cb();
+    })
+    .catch(function(e) { hideLoading(); console.error('Lee County fetch:', e); });
+}
+
+// ─────────────────────────────────────────────
 //  SYNC TAB COLOURS
 // ─────────────────────────────────────────────
 function syncTabColors() {
@@ -622,9 +708,17 @@ function syncTabColors() {
 fetchClinton(function() {
   if (clintonOn && !map.hasLayer(clintonLayer)) clintonLayer.addTo(map);
 });
+// Build Lee layer from inline data and zoom to it on load
+buildLeeLayer(function() {
+  // Auto-zoom to Lee County on startup
+  if (leeLayer) {
+    var b = leeLayer.getBounds();
+    if (b && b.isValid()) map.fitBounds(b, { padding: [40, 40] });
+  }
+});
 syncTabColors();
 syncSourceColors();
-renderMap(true);   // fit on first load only
+renderMap(false);   // don't fit IRI data — Lee County zoom takes priority
 
 // ─────────────────────────────────────────────
 //  GPS

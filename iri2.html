@@ -16,7 +16,7 @@
     --bg: #f5f6f8; --panel: #ffffff; --border: #dde0e8;
     --text: #1a1d27; --muted: #7a7f9a;
     --accent: #1a6ef5; --accent2: #7c3aed; --clinton: #e67e00; --sb: #0d9488; --lee: #16a34a;
-    --radius: 12px; --panel-h: 118px; --topbar-h: 48px;
+    --radius: 12px; --panel-h: 36px; --topbar-h: 36px;
   }
   html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
   #map { position: absolute; inset: 0; top: var(--topbar-h); bottom: var(--panel-h); }
@@ -25,21 +25,22 @@
   #topbar {
     position: absolute; top: 0; left: 0; right: 0; height: var(--topbar-h);
     z-index: 900; background: rgba(255,255,255,0.97); backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--border); padding: 0 10px;
-    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--border); padding: 0 6px;
+    display: flex; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: none;
   }
+  #topbar::-webkit-scrollbar { display: none; }
   #topbar h1 {
-    font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500;
+    font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500;
     letter-spacing: 0.03em; color: var(--accent); flex: 1;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   #modeToggle, #sourceToggle {
     display: flex; align-items: center; background: var(--bg);
-    border: 1.5px solid var(--border); border-radius: 999px; padding: 3px; gap: 2px; flex-shrink: 0;
+    border: 1.5px solid var(--border); border-radius: 999px; padding: 2px; gap: 1px; flex-shrink: 0;
   }
   .mode-btn {
-    padding: 4px 11px; border-radius: 999px; border: none; background: transparent;
-    color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: 999px; border: none; background: transparent;
+    color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 600;
     cursor: pointer; transition: all 0.18s; white-space: nowrap;
     -webkit-tap-highlight-color: transparent; letter-spacing: 0.02em;
   }
@@ -49,16 +50,16 @@
   .mode-btn:active { transform: scale(0.95); }
 
   #gpsBtn {
-    display: flex; align-items: center; gap: 6px; background: var(--bg);
+    display: flex; align-items: center; gap: 4px; background: var(--bg);
     border: 1.5px solid var(--border); color: var(--text); font-family: 'DM Sans', sans-serif;
-    font-size: 13px; font-weight: 500; padding: 6px 11px; border-radius: 999px;
+    font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 999px;
     cursor: pointer; transition: all 0.2s; white-space: nowrap;
     -webkit-tap-highlight-color: transparent; flex-shrink: 0;
   }
   #gpsBtn:active { transform: scale(0.96); }
   #gpsBtn.active    { background: var(--accent); border-color: var(--accent); color: #fff; }
   #gpsBtn.searching { border-color: #f9a825; color: #f9a825; }
-  #gpsBtn svg { width: 15px; height: 15px; flex-shrink: 0; }
+  #gpsBtn svg { width: 12px; height: 12px; flex-shrink: 0; }
 
   /* ZOOM */
   .leaflet-top.leaflet-left { top: 10px !important; }
@@ -66,38 +67,58 @@
   .leaflet-control-zoom a { background: #fff !important; color: var(--text) !important; border-color: var(--border) !important; font-size: 18px !important; width: 36px !important; height: 36px !important; line-height: 36px !important; }
   .leaflet-bar { border-color: var(--border) !important; }
 
-  /* BOTTOM PANEL */
+  /* BOTTOM PANEL — single slim row */
   #panel {
     position: absolute; bottom: 0; left: 0; right: 0; height: var(--panel-h);
     background: var(--panel); border-top: 1px solid var(--border);
-    z-index: 900; display: flex; flex-direction: column;
+    z-index: 900; display: flex; align-items: center;
     box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
   }
-  #layerTabs { display: flex; padding: 10px 10px 0; gap: 6px; flex-shrink: 0; }
-  .tab-btn {
-    flex: 1; padding: 7px 6px; border-radius: 8px; border: 1.5px solid var(--border);
-    background: transparent; color: var(--muted); font-family: 'DM Sans', sans-serif;
-    font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.18s;
-    -webkit-tap-highlight-color: transparent; text-align: center; line-height: 1.2;
+
+  /* LAYER TAB BUTTONS — now in topbar as pill group */
+  #layerTabs {
+    display: flex; align-items: center; background: var(--bg);
+    border: 1.5px solid var(--border); border-radius: 999px; padding: 2px; gap: 1px; flex-shrink: 0;
   }
-  .tab-btn:active { transform: scale(0.96); }
-  .tab-btn.iri-on          { background: var(--accent);  border-color: var(--accent);  color: #fff; }
-  .tab-btn.iri-on.seg-mode { background: var(--accent2); border-color: var(--accent2); }
-  .tab-btn.clinton-on      { background: var(--clinton); border-color: var(--clinton); color: #fff; }
-  .tab-btn.lee-on          { background: var(--lee);     border-color: var(--lee);     color: #fff; }
+  .tab-btn {
+    padding: 2px 8px; border-radius: 999px; border: none; background: transparent;
+    color: var(--muted); font-family: 'DM Sans', sans-serif;
+    font-size: 10px; font-weight: 600; cursor: pointer; transition: all 0.18s;
+    -webkit-tap-highlight-color: transparent; text-align: center; line-height: 1.2; white-space: nowrap;
+  }
+  .tab-btn:active { transform: scale(0.95); }
+  .tab-btn.iri-on          { background: var(--accent);  color: #fff; box-shadow: 0 1px 4px rgba(26,110,245,0.3); }
+  .tab-btn.iri-on.seg-mode { background: var(--accent2); box-shadow: 0 1px 4px rgba(124,58,237,0.3); }
+  .tab-btn.clinton-on      { background: var(--clinton); color: #fff; box-shadow: 0 1px 4px rgba(230,126,0,0.3); }
+  .tab-btn.lee-on          { background: var(--lee);     color: #fff; box-shadow: 0 1px 4px rgba(22,163,74,0.3); }
+
+  /* SCALEBAR — inline chip in legend row */
 
   #legendScroll {
     flex: 1; overflow-x: auto; overflow-y: hidden; display: flex; align-items: center;
-    gap: 6px; padding: 8px 10px; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    gap: 4px; padding: 0 8px; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    height: 100%;
   }
   #legendScroll::-webkit-scrollbar { display: none; }
   .legend-chip {
-    display: flex; align-items: center; gap: 6px; background: var(--bg);
-    border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px 4px 7px;
-    white-space: nowrap; font-size: 11px; color: var(--text); flex-shrink: 0;
+    display: flex; align-items: center; gap: 5px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px 2px 6px;
+    white-space: nowrap; font-size: 10px; color: var(--text); flex-shrink: 0;
   }
-  .legend-dot  { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
-  .legend-line { width: 20px; height: 4px; border-radius: 2px; flex-shrink: 0; }
+  .legend-dot  { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .legend-line { width: 16px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+
+  /* Courtesy text inline in footer */
+  #footerCourtesy {
+    flex-shrink: 0; padding: 0 8px 0 4px;
+    font-size: 10px; color: var(--muted); white-space: nowrap;
+    border-left: 1px solid var(--border); margin-left: 2px;
+  }
+  #footerCourtesy a { color: var(--accent); text-decoration: none; font-size: 10px; }
+  #footerCourtesy a:hover { text-decoration: underline; }
+
+  /* Hide default Leaflet attribution & author div (shown inline now) */
+  .leaflet-control-attribution, #authorAttrib { display: none !important; }
 
   /* LEAFLET POPUP — compact, auto-sized */
   .leaflet-popup-content-wrapper {
@@ -141,16 +162,7 @@
   .spinner.seg { border-top-color: var(--accent2); }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* AUTHOR ATTRIBUTION */
-  #authorAttrib {
-    display: block; text-align: right;
-    font-size: 12px; color: var(--text); font-weight: 500;
-    padding: 1px 6px 3px;
-    background: rgba(255,255,255,0.85);
-    backdrop-filter: blur(4px);
-  }
-  #authorAttrib a { color: var(--accent); text-decoration: none; font-size: 12px; }
-  #authorAttrib a:hover { text-decoration: underline; }
+
 </style>
 </head>
 <body>
@@ -164,6 +176,13 @@
   <div id="sourceToggle">
     <button class="mode-btn active"   id="srcCyroid"   onclick="setSource('cyroid')">CyRoads</button>
     <button class="mode-btn sb-pill"  id="srcSmartBox" onclick="setSource('smartbox')">SmartBox</button>
+  </div>
+  <!-- Layer tabs moved to topbar -->
+  <div id="layerTabs">
+    <button class="tab-btn iri-on" id="tab-all"     onclick="setIRI('all')">IRI All</button>
+    <button class="tab-btn"        id="tab-2026"    onclick="setIRI('2026')">IRI 2026</button>
+    <button class="tab-btn clinton-on" id="tab-clinton" onclick="toggleClinton()">Clinton Co</button>
+    <button class="tab-btn"        id="tab-lee"    onclick="toggleLee()">Lee Co</button>
   </div>
   <button id="gpsBtn" onclick="toggleGPS()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -180,12 +199,6 @@
 
 
 <div id="panel">
-  <div id="layerTabs">
-    <button class="tab-btn iri-on" id="tab-all"     onclick="setIRI('all')">IRI All</button>
-    <button class="tab-btn"        id="tab-2026"    onclick="setIRI('2026')">IRI 2026</button>
-    <button class="tab-btn clinton-on" id="tab-clinton" onclick="toggleClinton()">Clinton Co</button>
-    <button class="tab-btn"        id="tab-lee"    onclick="toggleLee()">Lee Co</button>
-  </div>
   <div id="legendScroll">
     <div class="legend-chip"><div class="legend-dot" style="background:#2E7D32"></div><span id="leg-excellent">Excellent</span></div>
     <div class="legend-chip"><div class="legend-dot" style="background:#8BC34A"></div><span id="leg-good">Good</span></div>
@@ -194,6 +207,17 @@
     <div class="legend-chip"><div class="legend-dot" style="background:#D32F2F"></div><span id="leg-bad">Bad</span></div>
     <div class="legend-chip"><div class="legend-line" style="background:#FF00FF"></div>Primary</div>
     <div class="legend-chip"><div class="legend-line" style="background:#00FFFF"></div>Secondary</div>
+    <!-- Scalebar inline with legend -->
+    <div class="legend-chip" id="scalebarChip" style="margin-left:4px; gap:5px;">
+      <span style="color:var(--muted);font-size:10px;font-weight:600;">Scale</span>
+      <div id="scaleBar" style="height:5px;border:2px solid var(--text);border-top:none;display:inline-block;min-width:28px;"></div>
+      <span id="scaleText" style="font-family:'DM Mono',monospace;font-size:10px;font-weight:500;">—</span>
+    </div>
+  </div>
+  <!-- Courtesy inline -->
+  <div id="footerCourtesy">
+    © <a href="https://www.openstreetmap.org/copyright" target="_blank">OSM</a>
+    &nbsp;·&nbsp; Abdullah Sourav &middot; <a href="mailto:sourav@iastate.edu">sourav@iastate.edu</a>
   </div>
 </div>
 
@@ -281,18 +305,44 @@ function resetLegend() {
 var map = L.map('map', { center:[42.05,-93.5], zoom:8, zoomControl:true, tap:true, tapTolerance:20 });
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(map);
 
-// Author tag below Leaflet attribution
-map.whenReady(function() {
-  var attribEl = document.querySelector('.leaflet-control-attribution');
-  if (attribEl) {
-    var d = document.createElement('div');
-    d.id = 'authorAttrib';
-    d.innerHTML = 'Abdullah Sourav &middot; <a href="mailto:sourav@iastate.edu">sourav@iastate.edu</a>';
-    attribEl.parentNode.insertBefore(d, attribEl.nextSibling);
-  }
-});
+// Attribution shown inline in footer panel
 
 var isMobile = window.matchMedia('(max-width:768px)').matches;
+
+// ─────────────────────────────────────────────
+//  CUSTOM SCALEBAR
+// ─────────────────────────────────────────────
+function updateScalebar() {
+  var center = map.getCenter();
+  var containerW = map.getContainer().clientWidth;
+  var targetPx = Math.round(containerW * 0.12);
+  targetPx = Math.max(40, Math.min(targetPx, 120));
+
+  // Convert pixels to meters at current zoom/latitude
+  var metersPerPx = (156543.03392 * Math.cos(center.lat * Math.PI / 180)) / Math.pow(2, map.getZoom());
+  var meters = metersPerPx * targetPx;
+
+  // Round to nice numbers
+  var niceMeters, label;
+  var km = meters / 1000;
+  var niceKm = [0.05,0.1,0.2,0.5,1,2,5,10,20,50,100,200,500,1000];
+  var chosen = niceKm[0];
+  for (var i = 0; i < niceKm.length; i++) {
+    if (niceKm[i] <= km) chosen = niceKm[i]; else break;
+  }
+  niceMeters = chosen * 1000;
+  label = chosen >= 1 ? chosen + ' km' : (niceMeters) + ' m';
+
+  var barPx = niceMeters / metersPerPx;
+  var scaleBar  = document.getElementById('scaleBar');
+  var scaleText = document.getElementById('scaleText');
+  if (scaleBar && scaleText) {
+    scaleBar.style.width  = Math.round(barPx) + 'px';
+    scaleText.textContent = label;
+  }
+}
+map.on('moveend zoomend', updateScalebar);
+map.whenReady(function() { setTimeout(updateScalebar, 300); });
 var BASE_W   = isMobile ? 10 : 5;
 var HOVER_W  = isMobile ? 16 : 9;
 

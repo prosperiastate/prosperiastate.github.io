@@ -106,7 +106,15 @@
     display: none; flex-shrink: 0;
   }
   #dateRangeBtn.filtered #dateRangeDot { display: inline-block; }
-
+  #drawPolyBtn {
+  display: flex; align-items: center; gap: 4px; background: var(--bg);
+  border: 1.5px solid var(--border); color: var(--text); font-family: 'DM Sans', sans-serif;
+  font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 999px;
+  cursor: pointer; transition: all 0.2s; white-space: nowrap; -webkit-tap-highlight-color: transparent; flex-shrink: 0;
+  }
+  #drawPolyBtn:active { transform: scale(0.96); }
+  #drawPolyBtn.active { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+  
   /* DATE RANGE DROPDOWN */
   #dateDropdown {
     position: absolute; top: calc(var(--topbar-h) + 6px); left: 50%; transform: translateX(-50%);
@@ -242,6 +250,12 @@
     <button class="tab-btn clinton-on" id="tab-clinton" onclick="toggleClinton()">Clinton Co</button>
     <button class="tab-btn"            id="tab-lee"     onclick="toggleLee()">Lee Co</button>
   </div>
+
+  <button id="drawPolyBtn" onclick="togglePolyDraw()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px; height:12px; flex-shrink:0;">
+    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+  </svg> Filter Area
+</button>
 
   <!-- DATE RANGE FILTER -->
   <button id="dateRangeBtn" onclick="toggleDateDropdown()">
@@ -725,6 +739,190 @@ function buildLeeLayer(cb) {
       cb();
     })
     .catch(function(e) { hideLoading(); console.error('Lee County fetch:', e); });
+}
+
+// ─────────────────────────────────────────────
+//  POLYGON AREA FILTER SELECTION LOGIC
+// ─────────────────────────────────────────────
+var isDrawing = false;
+var drawPoints = [];
+var tempPolyline = null;
+var finalPolygon = null;
+var drawPolyBtn = document.getElementById('drawPolyBtn');
+
+function togglePolyDraw() {
+  if (isDrawing) {
+    cancelPolyDraw();
+  } else {
+    startPolyDraw();
+  }
+}
+
+function startPolyDraw() {
+  isDrawing = true;
+  drawPoints = [];
+  drawPolyBtn.classList.add('active');
+  drawPolyBtn.innerHTML = 'Cancel Draw';
+  
+  if (finalPolygon) { map.removeLayer(finalPolygon); finalPolygon = null; }
+  
+  showGPSStatus('🖱️ Click map to draw polygon. Double-click to finish.');
+  
+  map.on('click', onMapDrawClick);
+  map.on('mousemove', onMapDrawMove);
+}
+
+function cancelPolyDraw() {
+  isDrawing = false;
+  drawPolyBtn.classList.remove('active');
+  drawPolyBtn.innerHTML = 'Filter Area';
+  hideGPSStatus();
+  
+  if (tempPolyline) { map.removeLayer(tempPolyline); tempPolyline = null; }
+  if (finalPolygon) { map.removeLayer(finalPolygon); finalPolygon = null; }
+  
+  map.off('click', onMapDrawClick);
+  map.off('mousemove', onMapDrawMove);
+}
+
+function onMapDrawClick(e) {
+  var latlng = e.latlng;
+  drawPoints.push([latlng.lat, latlng.lng]);
+  
+  if (!tempPolyline) {
+    tempPolyline = L.polyline(drawPoints, {color: 'var(--accent2)', weight: 3, dashArray: '5, 5'}).addTo(map);
+  } else {
+    tempPolyline.setLatLngs(drawPoints);
+  }
+  
+  // Detect double click manual finish condition proxy via identical structural point coordinates
+  if (drawPoints.length > 2) {
+    var p1 = drawPoints[drawPoints.length - 1];
+    var p2 = drawPoints[drawPoints.length - 2];
+    if (Math.abs(p1[0] - p2[0]) < 0.00001 && Math.abs(p1[1] - p2[1]) < 0.00001) {
+      drawPoints.pop(); // pull dummy duplicate
+      finishPolyDraw();
+    }
+  }
+}
+
+function onMapDrawMove(e) {
+  if (drawPoints.length === 0 || !tempPolyline) return;
+  var currentPoints = drawPoints.concat([[e.latlng.lat, e.latlng.lng]]);
+  tempPolyline.setLatLngs(currentPoints);
+}
+
+// Attach explicit double click callback execution fallback hook directly to Leaflet layer mechanics
+map.on('dblclick', function(e) {
+  if (isDrawing && drawPoints.length > 2) {
+    L.DomEvent.stopPropagation(e);
+    finishPolyDraw();
+  }
+});
+
+function finishPolyDraw() {
+  isDrawing = false;
+  drawPolyBtn.classList.remove('active');
+  drawPolyBtn.innerHTML = 'Clear Selection';
+  drawPolyBtn.onclick = clearPolyFilter;
+  
+  map.off('click', onMapDrawClick);
+  map.off('mousemove', onMapDrawMove);
+  if (tempPolyline) { map.removeLayer(tempPolyline); tempPolyline = null; }
+  
+  if (drawPoints.length < 3) {
+    showGPSStatus('⚠️ Not enough points drawn.', 3000);
+    clearPolyFilter();
+    return;
+  }
+  
+  finalPolygon = L.polygon(drawPoints, {color: 'var(--accent2)', fillColor: 'var(--accent2)', fillOpacity: 0.15, weight: 3}).addTo(map);
+  calculateAreaMetrics();
+}
+
+function clearPolyFilter() {
+  if (finalPolygon) { map.removeLayer(finalPolygon); finalPolygon = null; }
+  hideGPSStatus();
+  drawPolyBtn.innerHTML = 'Filter Area';
+  drawPolyBtn.onclick = togglePolyDraw;
+  closeInfo();
+}
+
+// Ray-casting point-in-polygon helper
+function isPointInPolygon(point, vs) {
+  var x = point[0], y = point[1];
+  var inside = false;
+  for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+    var xi = vs[i][0], yi = vs[i][1];
+    var xj = vs[j][0], yj = vs[j][1];
+    var intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function calculateAreaMetrics() {
+  var activeData = geoCache[currentMode];
+  if (!activeData || !activeData.features) {
+    showGPSStatus('No active layer lines to sample.', 3000);
+    return;
+  }
+  
+  var sumIRI = 0;
+  var validCount = 0;
+  var totalMiles = 0;
+  
+  activeData.features.forEach(function(f) {
+    if (!featureInDateRange(f)) return; // obey date filters
+    
+    // Evaluate via geometric bounds centroid baseline
+    if (f.geometry && f.geometry.coordinates) {
+      var coords = f.geometry.coordinates;
+      var samplePoint = null;
+      
+      if (f.geometry.type === 'LineString') {
+        // Grab middle segment vertex point coordinate
+        var midIdx = Math.floor(coords.length / 2);
+        samplePoint = [coords[midIdx][1], coords[midIdx][0]]; // flip to lat,lng
+      } else if (f.geometry.type === 'MultiLineString') {
+        var midLine = coords[Math.floor(coords.length / 2)];
+        samplePoint = [midLine[Math.floor(midLine.length / 2)][1], midLine[Math.floor(midLine.length / 2)][0]];
+      }
+      
+      if (samplePoint && isPointInPolygon(samplePoint, drawPoints)) {
+        var p = f.properties;
+        var iriVal = currentMode === 'segment' ? p.iri_in_mi : p.whole_iri_in_mi;
+        var lenVal = currentMode === 'segment' ? p.seg_len_mi : p.whole_len_mi;
+        
+        if (iriVal != null && !isNaN(iriVal)) {
+          sumIRI += (+iriVal);
+          validCount++;
+        }
+        if (lenVal != null && !isNaN(lenVal)) {
+          totalMiles += (+lenVal);
+        }
+      }
+    }
+  });
+  
+  if (validCount === 0) {
+    showGPSStatus('📊 No matching road lines inside selected polygon.');
+    return;
+  }
+  
+  var meanIRI = (sumIRI / validCount).toFixed(1);
+  var bounds = finalPolygon.getBounds();
+  
+  // Render analytical metrics summary payload to interface via standard popup mechanics
+  var rows = [
+    ['Avg IRI Value', meanIRI + ' in/mi', true],
+    ['Captured Sample Size', validCount + ' features', false],
+    ['Aggregated Length', totalMiles.toFixed(2) + ' mi', false]
+  ];
+  
+  // Use 'Good' rating color template dynamically if it trends safely under average index metrics limits
+  var dummyClass = meanIRI < 95 ? 'Good' : (meanIRI < 135 ? 'Fair' : 'Bad');
+  showInfo(bounds.getCenter(), 'Selected Area Analysis', rows, currentMode, null);
 }
 
 // ─────────────────────────────────────────────

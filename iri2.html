@@ -861,6 +861,7 @@ function isPointInPolygon(point, vs) {
   return inside;
 }
 
+/*
 function calculateAreaMetrics() {
   var activeData = geoCache[currentMode];
   if (!activeData || !activeData.features) {
@@ -923,6 +924,180 @@ function calculateAreaMetrics() {
   // Use 'Good' rating color template dynamically if it trends safely under average index metrics limits
   var dummyClass = meanIRI < 95 ? 'Good' : (meanIRI < 135 ? 'Fair' : 'Bad');
   showInfo(bounds.getCenter(), 'Selected Area Analysis', rows, currentMode, null);
+}
+*/
+
+function normalizeRoadType(rt) {
+
+  rt = (rt || '').toLowerCase();
+
+  if (
+      rt.includes('interstate') ||
+      rt.includes('highway') ||
+      rt.includes('state')
+  ) return 'Highway';
+
+  if (rt.includes('county'))
+      return 'County Road';
+
+  if (
+      rt.includes('city') ||
+      rt.includes('street') ||
+      rt.includes('municipal')
+  ) return 'City Street';
+
+  return 'Other';
+}
+
+function calculateAreaMetrics() {
+
+  var activeData = geoCache[currentMode];
+
+  if (!activeData || !activeData.features) {
+    showGPSStatus('No active layer lines to sample.', 3000);
+    return;
+  }
+
+  var stats = {};
+
+  activeData.features.forEach(function(f) {
+
+    if (!featureInDateRange(f)) return;
+
+    if (!f.geometry || !f.geometry.coordinates) return;
+
+    var coords = f.geometry.coordinates;
+    var samplePoint = null;
+
+    if (f.geometry.type === 'LineString') {
+
+      var midIdx = Math.floor(coords.length / 2);
+
+      samplePoint = [
+        coords[midIdx][1],
+        coords[midIdx][0]
+      ];
+
+    } else if (f.geometry.type === 'MultiLineString') {
+
+      var midLine = coords[Math.floor(coords.length / 2)];
+
+      samplePoint = [
+        midLine[Math.floor(midLine.length / 2)][1],
+        midLine[Math.floor(midLine.length / 2)][0]
+      ];
+    }
+
+    if (
+      samplePoint &&
+      isPointInPolygon(samplePoint, drawPoints)
+    ) {
+
+      var p = f.properties;
+
+      var iriVal =
+        currentMode === 'segment'
+          ? p.iri_in_mi
+          : p.whole_iri_in_mi;
+
+      var lenVal =
+        currentMode === 'segment'
+          ? p.seg_len_mi
+          : p.whole_len_mi;
+
+      var roadType = normalizeRoadType(p.road_type);
+
+      if (!stats[roadType]) {
+
+        stats[roadType] = {
+          length: 0,
+          iriLengthSum: 0,
+          featureCount: 0
+        };
+      }
+
+      if (
+        lenVal != null &&
+        !isNaN(lenVal)
+      ) {
+
+        stats[roadType].length += (+lenVal);
+      }
+
+      if (
+        iriVal != null &&
+        !isNaN(iriVal) &&
+        lenVal != null &&
+        !isNaN(lenVal)
+      ) {
+
+        stats[roadType].iriLengthSum +=
+          (+iriVal) * (+lenVal);
+
+        stats[roadType].featureCount++;
+      }
+    }
+  });
+
+  if (Object.keys(stats).length === 0) {
+
+    showGPSStatus(
+      '📊 No matching road lines inside selected polygon.'
+    );
+
+    return;
+  }
+
+  var rows = [];
+
+  var displayOrder = [
+    'Highway',
+    'County Road',
+    'City Street',
+    'Other'
+  ];
+
+  displayOrder.forEach(function(type) {
+
+    if (!stats[type]) return;
+
+    var length = stats[type].length;
+
+    var avgIRI =
+      length > 0
+        ? stats[type].iriLengthSum / length
+        : null;
+
+    rows.push([
+      type + ' Length',
+      length.toFixed(2) + ' mi',
+      false
+    ]);
+
+    rows.push([
+      type + ' Avg IRI',
+      avgIRI
+        ? avgIRI.toFixed(1) + ' in/mi'
+        : 'N/A',
+      false
+    ]);
+
+    rows.push([
+      type + ' Roads',
+      stats[type].featureCount,
+      false
+    ]);
+  });
+
+  var bounds = finalPolygon.getBounds();
+
+  showInfo(
+    bounds.getCenter(),
+    'Selected Area Summary',
+    rows,
+    currentMode,
+    null
+  );
 }
 
 // ─────────────────────────────────────────────

@@ -15,8 +15,8 @@
   :root {
     --bg: #f5f6f8; --panel: #ffffff; --border: #dde0e8;
     --text: #1a1d27; --muted: #7a7f9a;
-    --accent: #1a6ef5; --accent2: #7c3aed; --clinton: #e67e00; --sb: #0d9488;
-    --radius: 12px; --panel-h: 118px; --topbar-h: 48px;
+    --accent: #1a6ef5; --accent2: #7c3aed; --clinton: #e67e00; --sb: #0d9488; --lee: #16a34a;
+    --radius: 12px; --panel-h: 36px; --topbar-h: 36px;
   }
   html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
   #map { position: absolute; inset: 0; top: var(--topbar-h); bottom: var(--panel-h); }
@@ -25,21 +25,22 @@
   #topbar {
     position: absolute; top: 0; left: 0; right: 0; height: var(--topbar-h);
     z-index: 900; background: rgba(255,255,255,0.97); backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--border); padding: 0 10px;
-    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--border); padding: 0 6px;
+    display: flex; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: none;
   }
+  #topbar::-webkit-scrollbar { display: none; }
   #topbar h1 {
-    font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500;
+    font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500;
     letter-spacing: 0.03em; color: var(--accent); flex: 1;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   #modeToggle, #sourceToggle {
     display: flex; align-items: center; background: var(--bg);
-    border: 1.5px solid var(--border); border-radius: 999px; padding: 3px; gap: 2px; flex-shrink: 0;
+    border: 1.5px solid var(--border); border-radius: 999px; padding: 2px; gap: 1px; flex-shrink: 0;
   }
   .mode-btn {
-    padding: 4px 11px; border-radius: 999px; border: none; background: transparent;
-    color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: 999px; border: none; background: transparent;
+    color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 600;
     cursor: pointer; transition: all 0.18s; white-space: nowrap;
     -webkit-tap-highlight-color: transparent; letter-spacing: 0.02em;
   }
@@ -49,16 +50,16 @@
   .mode-btn:active { transform: scale(0.95); }
 
   #gpsBtn {
-    display: flex; align-items: center; gap: 6px; background: var(--bg);
+    display: flex; align-items: center; gap: 4px; background: var(--bg);
     border: 1.5px solid var(--border); color: var(--text); font-family: 'DM Sans', sans-serif;
-    font-size: 13px; font-weight: 500; padding: 6px 11px; border-radius: 999px;
+    font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 999px;
     cursor: pointer; transition: all 0.2s; white-space: nowrap;
     -webkit-tap-highlight-color: transparent; flex-shrink: 0;
   }
   #gpsBtn:active { transform: scale(0.96); }
   #gpsBtn.active    { background: var(--accent); border-color: var(--accent); color: #fff; }
   #gpsBtn.searching { border-color: #f9a825; color: #f9a825; }
-  #gpsBtn svg { width: 15px; height: 15px; flex-shrink: 0; }
+  #gpsBtn svg { width: 12px; height: 12px; flex-shrink: 0; }
 
   /* ZOOM */
   .leaflet-top.leaflet-left { top: 10px !important; }
@@ -70,35 +71,127 @@
   #panel {
     position: absolute; bottom: 0; left: 0; right: 0; height: var(--panel-h);
     background: var(--panel); border-top: 1px solid var(--border);
-    z-index: 900; display: flex; flex-direction: column;
+    z-index: 900; display: flex; align-items: center;
     box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
   }
-  #layerTabs { display: flex; padding: 10px 10px 0; gap: 6px; flex-shrink: 0; }
-  .tab-btn {
-    flex: 1; padding: 7px 6px; border-radius: 8px; border: 1.5px solid var(--border);
-    background: transparent; color: var(--muted); font-family: 'DM Sans', sans-serif;
-    font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.18s;
-    -webkit-tap-highlight-color: transparent; text-align: center; line-height: 1.2;
-  }
-  .tab-btn:active { transform: scale(0.96); }
-  .tab-btn.iri-on          { background: var(--accent);  border-color: var(--accent);  color: #fff; }
-  .tab-btn.iri-on.seg-mode { background: var(--accent2); border-color: var(--accent2); }
-  .tab-btn.clinton-on      { background: var(--clinton); border-color: var(--clinton); color: #fff; }
 
+  /* LAYER TAB BUTTONS */
+  #layerTabs {
+    display: flex; align-items: center; background: var(--bg);
+    border: 1.5px solid var(--border); border-radius: 999px; padding: 2px; gap: 1px; flex-shrink: 0;
+  }
+  .tab-btn {
+    padding: 2px 8px; border-radius: 999px; border: none; background: transparent;
+    color: var(--muted); font-family: 'DM Sans', sans-serif;
+    font-size: 10px; font-weight: 600; cursor: pointer; transition: all 0.18s;
+    -webkit-tap-highlight-color: transparent; text-align: center; line-height: 1.2; white-space: nowrap;
+  }
+  .tab-btn:active { transform: scale(0.95); }
+  .tab-btn.clinton-on { background: var(--clinton); color: #fff; box-shadow: 0 1px 4px rgba(230,126,0,0.3); }
+  .tab-btn.lee-on     { background: var(--lee);     color: #fff; box-shadow: 0 1px 4px rgba(22,163,74,0.3); }
+
+  /* DATE RANGE BUTTON */
+  #dateRangeBtn {
+    display: flex; align-items: center; gap: 4px; background: var(--bg);
+    border: 1.5px solid var(--border); color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+    cursor: pointer; transition: all 0.18s; white-space: nowrap;
+    -webkit-tap-highlight-color: transparent; flex-shrink: 0; letter-spacing: 0.02em;
+    position: relative;
+  }
+  #dateRangeBtn.active { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 1px 4px rgba(26,110,245,0.3); }
+  #dateRangeBtn:active { transform: scale(0.95); }
+  #dateRangeDot {
+    width: 6px; height: 6px; border-radius: 50%; background: #f9a825;
+    display: none; flex-shrink: 0;
+  }
+  #dateRangeBtn.filtered #dateRangeDot { display: inline-block; }
+  #drawPolyBtn {
+  display: flex; align-items: center; gap: 4px; background: var(--bg);
+  border: 1.5px solid var(--border); color: var(--text); font-family: 'DM Sans', sans-serif;
+  font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 999px;
+  cursor: pointer; transition: all 0.2s; white-space: nowrap; -webkit-tap-highlight-color: transparent; flex-shrink: 0;
+  }
+  #drawPolyBtn:active { transform: scale(0.96); }
+  #drawPolyBtn.active { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+  
+  /* DATE RANGE DROPDOWN */
+  #dateDropdown {
+    position: absolute; top: calc(var(--topbar-h) + 6px); left: 50%; transform: translateX(-50%);
+    z-index: 1000; background: #fff; border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: 0 4px 24px rgba(0,0,0,0.13);
+    padding: 12px 14px; display: none; min-width: 260px; max-width: 320px;
+    font-size: 12px;
+  }
+  #dateDropdown.open { display: block; }
+
+  .dd-section-label {
+    font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: 0.06em;
+    text-transform: uppercase; margin-bottom: 6px;
+  }
+  .preset-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 12px;
+  }
+  .preset-btn {
+    padding: 4px 6px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 10px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+    text-align: center; -webkit-tap-highlight-color: transparent;
+  }
+  .preset-btn:hover  { border-color: var(--accent); color: var(--accent); }
+  .preset-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .preset-btn:active { transform: scale(0.96); }
+
+  .dd-divider { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+
+  .date-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .date-row label { font-size: 11px; font-weight: 600; color: var(--muted); width: 28px; flex-shrink: 0; }
+  .date-row input[type="month"] {
+    flex: 1; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px;
+    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text); background: var(--bg);
+    outline: none; cursor: pointer;
+  }
+  .date-row input[type="month"]:focus { border-color: var(--accent); }
+
+  #applyDateRange {
+    width: 100%; padding: 6px; border-radius: 8px; border: none;
+    background: var(--accent); color: #fff; font-family: 'DM Sans', sans-serif;
+    font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; margin-top: 4px;
+  }
+  #applyDateRange:hover  { background: #1559cc; }
+  #applyDateRange:active { transform: scale(0.98); }
+
+  #countBadge {
+    font-size: 10px; color: var(--muted); text-align: center;
+    margin-top: 6px; font-family: 'DM Mono', monospace;
+  }
+
+  /* LEGEND + SCALEBAR */
   #legendScroll {
     flex: 1; overflow-x: auto; overflow-y: hidden; display: flex; align-items: center;
-    gap: 6px; padding: 8px 10px; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    gap: 4px; padding: 0 8px; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    height: 100%;
   }
   #legendScroll::-webkit-scrollbar { display: none; }
   .legend-chip {
-    display: flex; align-items: center; gap: 6px; background: var(--bg);
-    border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px 4px 7px;
-    white-space: nowrap; font-size: 11px; color: var(--text); flex-shrink: 0;
+    display: flex; align-items: center; gap: 5px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px 2px 6px;
+    white-space: nowrap; font-size: 10px; color: var(--text); flex-shrink: 0;
   }
-  .legend-dot  { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
-  .legend-line { width: 20px; height: 4px; border-radius: 2px; flex-shrink: 0; }
+  .legend-dot  { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .legend-line { width: 16px; height: 3px; border-radius: 2px; flex-shrink: 0; }
 
-  /* LEAFLET POPUP — compact, auto-sized */
+  #footerCourtesy {
+    flex-shrink: 0; padding: 0 8px 0 4px;
+    font-size: 10px; color: var(--muted); white-space: nowrap;
+    border-left: 1px solid var(--border); margin-left: 2px;
+  }
+  #footerCourtesy a { color: var(--accent); text-decoration: none; font-size: 10px; }
+  #footerCourtesy a:hover { text-decoration: underline; }
+
+  .leaflet-control-attribution, #authorAttrib { display: none !important; }
+
+  /* LEAFLET POPUP */
   .leaflet-popup-content-wrapper {
     border-radius: var(--radius) !important;
     border: 1px solid var(--border) !important;
@@ -139,17 +232,6 @@
   .spinner { width:12px; height:12px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.7s linear infinite; flex-shrink:0; }
   .spinner.seg { border-top-color: var(--accent2); }
   @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* AUTHOR ATTRIBUTION */
-  #authorAttrib {
-    display: block; text-align: right;
-    font-size: 12px; color: var(--text); font-weight: 500;
-    padding: 1px 6px 3px;
-    background: rgba(255,255,255,0.85);
-    backdrop-filter: blur(4px);
-  }
-  #authorAttrib a { color: var(--accent); text-decoration: none; font-size: 12px; }
-  #authorAttrib a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -164,6 +246,24 @@
     <button class="mode-btn active"   id="srcCyroid"   onclick="setSource('cyroid')">CyRoads</button>
     <button class="mode-btn sb-pill"  id="srcSmartBox" onclick="setSource('smartbox')">SmartBox</button>
   </div>
+  <div id="layerTabs">
+    <button class="tab-btn clinton-on" id="tab-clinton" onclick="toggleClinton()">Clinton Co</button>
+    <button class="tab-btn"            id="tab-lee"     onclick="toggleLee()">Lee Co</button>
+  </div>
+
+  <button id="drawPolyBtn" onclick="togglePolyDraw()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px; height:12px; flex-shrink:0;">
+    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+  </svg> Filter Area
+</button>
+
+  <!-- DATE RANGE FILTER -->
+  <button id="dateRangeBtn" onclick="toggleDateDropdown()">
+    <div id="dateRangeDot"></div>
+    <span id="dateRangeBtnLabel">IRI All</span>
+    ▾
+  </button>
+
   <button id="gpsBtn" onclick="toggleGPS()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
@@ -173,17 +273,36 @@
   </button>
 </div>
 
+<!-- DATE RANGE DROPDOWN -->
+<div id="dateDropdown">
+  <div class="dd-section-label">Quick select</div>
+  <div class="preset-grid">
+    <button class="preset-btn active" id="preset-all"  onclick="applyPreset('all')">All dates</button>
+    <button class="preset-btn"        id="preset-2026" onclick="applyPreset('2026')">2026</button>
+    <button class="preset-btn"        id="preset-2025" onclick="applyPreset('2025')">2025</button>
+    <button class="preset-btn"        id="preset-2024" onclick="applyPreset('2024')">2024</button>
+    <button class="preset-btn"        id="preset-1mo"  onclick="applyPreset('1mo')">Last 1 mo</button>
+    <button class="preset-btn"        id="preset-1w"  onclick="applyPreset('1w')">Last 1 w</button>
+  </div>
+  <hr class="dd-divider">
+  <div class="dd-section-label">Custom range</div>
+  <div class="date-row">
+    <label>From</label>
+    <input type="month" id="fromMonth" placeholder="YYYY-MM">
+  </div>
+  <div class="date-row">
+    <label>To</label>
+    <input type="month" id="toMonth" placeholder="YYYY-MM">
+  </div>
+  <button id="applyDateRange" onclick="applyCustomRange()">Apply range</button>
+  <div id="countBadge"></div>
+</div>
+
 <div id="map"></div>
 <div id="gpsStatus"></div>
 <div id="loadingToast"><div class="spinner" id="spinnerEl"></div><span id="loadingMsg">Loading…</span></div>
 
-
 <div id="panel">
-  <div id="layerTabs">
-    <button class="tab-btn iri-on" id="tab-all"     onclick="setIRI('all')">IRI All</button>
-    <button class="tab-btn"        id="tab-2026"    onclick="setIRI('2026')">IRI 2026</button>
-    <button class="tab-btn clinton-on" id="tab-clinton" onclick="toggleClinton()">Clinton Co.</button>
-  </div>
   <div id="legendScroll">
     <div class="legend-chip"><div class="legend-dot" style="background:#2E7D32"></div><span id="leg-excellent">Excellent</span></div>
     <div class="legend-chip"><div class="legend-dot" style="background:#8BC34A"></div><span id="leg-good">Good</span></div>
@@ -192,6 +311,15 @@
     <div class="legend-chip"><div class="legend-dot" style="background:#D32F2F"></div><span id="leg-bad">Bad</span></div>
     <div class="legend-chip"><div class="legend-line" style="background:#FF00FF"></div>Primary</div>
     <div class="legend-chip"><div class="legend-line" style="background:#00FFFF"></div>Secondary</div>
+    <div class="legend-chip" id="scalebarChip" style="margin-left:4px; gap:5px;">
+      <span style="color:var(--muted);font-size:10px;font-weight:600;">Scale</span>
+      <div id="scaleBar" style="height:5px;border:2px solid var(--text);border-top:none;display:inline-block;min-width:28px;"></div>
+      <span id="scaleText" style="font-family:'DM Mono',monospace;font-size:10px;font-weight:500;">—</span>
+    </div>
+  </div>
+  <div id="footerCourtesy">
+    © <a href="https://www.openstreetmap.org/copyright" target="_blank">OSM</a>
+     <a href="mailto:sourav@iastate.edu">sourav@iastate.edu</a>
   </div>
 </div>
 
@@ -213,7 +341,30 @@ var currentSource = 'cyroid';
 var URLS = URLS_CYROID;
 
 // ─────────────────────────────────────────────
-//  IRI THRESHOLDS BY ROAD TYPE
+//  DATE RANGE STATE
+//  dateFrom / dateTo: null = no bound; or Date objects (start of month)
+// ─────────────────────────────────────────────
+var dateFrom = null;
+var dateTo   = null;
+var activePreset = 'all';
+
+function parseCollectDate(val) {
+  if (!val) return null;
+  var d = new Date(val);
+  return isNaN(d) ? null : d;
+}
+
+function featureInDateRange(f) {
+  if (!dateFrom && !dateTo) return true;
+  var d = parseCollectDate(f.properties.collect_dt);
+  if (!d) return false;
+  if (dateFrom && d < dateFrom) return false;
+  if (dateTo   && d > dateTo)   return false;
+  return true;
+}
+
+// ─────────────────────────────────────────────
+//  IRI THRESHOLDS
 // ─────────────────────────────────────────────
 var IRI_THRESHOLDS = {
   highway:     [65,  85,  105, 125],
@@ -277,34 +428,52 @@ function resetLegend() {
 var map = L.map('map', { center:[42.05,-93.5], zoom:8, zoomControl:true, tap:true, tapTolerance:20 });
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(map);
 
-// Author tag below Leaflet attribution
-map.whenReady(function() {
-  var attribEl = document.querySelector('.leaflet-control-attribution');
-  if (attribEl) {
-    var d = document.createElement('div');
-    d.id = 'authorAttrib';
-    d.innerHTML = 'Abdullah Sourav &middot; <a href="mailto:sourav@iastate.edu">sourav@iastate.edu</a>';
-    attribEl.parentNode.insertBefore(d, attribEl.nextSibling);
-  }
-});
-
 var isMobile = window.matchMedia('(max-width:768px)').matches;
-var BASE_W   = isMobile ? 10 : 5;
-var HOVER_W  = isMobile ? 16 : 9;
+
+// ─────────────────────────────────────────────
+//  CUSTOM SCALEBAR
+// ─────────────────────────────────────────────
+function updateScalebar() {
+  var center = map.getCenter();
+  var containerW = map.getContainer().clientWidth;
+  var targetPx = Math.round(containerW * 0.12);
+  targetPx = Math.max(40, Math.min(targetPx, 120));
+  var metersPerPx = (156543.03392 * Math.cos(center.lat * Math.PI / 180)) / Math.pow(2, map.getZoom());
+  var meters = metersPerPx * targetPx;
+  var km = meters / 1000;
+  var niceKm = [0.05,0.1,0.2,0.5,1,2,5,10,20,50,100,200,500,1000];
+  var chosen = niceKm[0];
+  for (var i = 0; i < niceKm.length; i++) {
+    if (niceKm[i] <= km) chosen = niceKm[i]; else break;
+  }
+  var niceMeters = chosen * 1000;
+  var label = chosen >= 1 ? chosen + ' km' : niceMeters + ' m';
+  var barPx = niceMeters / metersPerPx;
+  var scaleBar  = document.getElementById('scaleBar');
+  var scaleText = document.getElementById('scaleText');
+  if (scaleBar && scaleText) {
+    scaleBar.style.width  = Math.round(barPx) + 'px';
+    scaleText.textContent = label;
+  }
+}
+map.on('moveend zoomend', updateScalebar);
+map.whenReady(function() { setTimeout(updateScalebar, 300); });
+
+var BASE_W  = isMobile ? 10 : 5;
+var HOVER_W = isMobile ? 16 : 9;
 
 // ─────────────────────────────────────────────
 //  STATE
-//  iriAllOn / iri2026On : independent — both can be off,
-//  but turning one ON flips the other OFF (mutually exclusive when active)
 // ─────────────────────────────────────────────
-var currentMode = 'whole';
-var iriAllOn    = true;
-var iri2026On   = false;
-var clintonOn   = true;
+var currentMode  = 'whole';
+var clintonOn    = true;
+var leeOn        = false;
 
 var geoCache  = { whole: null, segment: null };
-var iriLayers = { whole: { all: null, yr2026: null }, segment: { all: null, yr2026: null } };
+// Single active layer per mode (date-filtered)
+var iriLayer  = { whole: null, segment: null };
 var clintonLayer = null;
+var leeLayer     = null;
 
 // ─────────────────────────────────────────────
 //  HELPERS
@@ -316,7 +485,6 @@ function getRoadColor(type) {
   return { Primary:'#FF00FF', Secondary:'#00FFFF' }[type] || '#aaa';
 }
 function safe(v) { return (v===null||v===undefined||v==='') ? 'N/A' : v; }
-function getYear(d) { if(!d) return null; var x=new Date(d); return isNaN(x)?null:x.getFullYear(); }
 
 // ─────────────────────────────────────────────
 //  LOADING TOAST
@@ -332,9 +500,9 @@ function showLoading(msg, isSeg) {
 function hideLoading() { loadingToast.classList.remove('visible'); }
 
 // ─────────────────────────────────────────────
-//  INFO POPUP  (Leaflet popup anchored to click point)
+//  INFO POPUP
 // ─────────────────────────────────────────────
-var infoPopup = L.popup({ maxWidth: 280, minWidth: 200, autoPan: true, autoPanPadding: [20, 20], className: '' });
+var infoPopup = L.popup({ maxWidth: 280, minWidth: 200, autoPan: true, autoPanPadding: [20, 20] });
 
 function showInfo(latlng, title, rows, mode, roadType) {
   var modeClass = mode === 'segment' ? 'seg' : 'whole';
@@ -401,7 +569,7 @@ function bindIRI(feature, layer, getParent, mode) {
         ['Speed',       spd,                               false],
         ['Direction',   safe(p.direction),                 false],
         ['Surface',     safe(p.surface),                   false],
-        ['Collection Date',   safe(p.collect_dt),                false]
+        ['Collection Date', safe(p.collect_dt),            false]
       ] : [
         ['IRI Class',   iriClass,                         true],
         ['Road IRI',    safe(p.whole_iri_in_mi)+' in/mi', false],
@@ -411,7 +579,7 @@ function bindIRI(feature, layer, getParent, mode) {
         ['Surface',     safe(p.surface),                   false],
         ['Road Type',   safe(p.road_type),                 false],
         ['Segments',    safe(p.n_segments),                false],
-        ['Collection Date',   safe(p.collect_dt),                false]
+        ['Collection Date', safe(p.collect_dt),            false]
       ];
       showInfo(e.latlng, safe(p.road_id)+(p.road_type?' · '+p.road_type:''), rows, mode, p.road_type);
     }
@@ -419,25 +587,35 @@ function bindIRI(feature, layer, getParent, mode) {
 }
 
 // ─────────────────────────────────────────────
-//  BUILD IRI LAYERS
+//  BUILD FILTERED IRI LAYER
 // ─────────────────────────────────────────────
-function buildIRILayers(data, mode) {
-  var allLyr, yr2026Lyr;
-  allLyr = L.geoJSON(data, {
+function buildFilteredLayer(data, mode) {
+  var count = 0;
+  var lyr = L.geoJSON(data, {
+    filter: function(f) {
+      var pass = featureInDateRange(f);
+      if (pass) count++;
+      return pass;
+    },
     style: iriStyle,
-    onEachFeature: function(f,l) { bindIRI(f,l,function(){return allLyr;},mode); }
+    onEachFeature: function(f,l) { bindIRI(f, l, function(){ return iriLayer[mode]; }, mode); }
   });
-  yr2026Lyr = L.geoJSON(data, {
-    filter: function(f){ var y=getYear(f.properties.collect_dt); return y!==null&&y>=2026; },
-    style: iriStyle,
-    onEachFeature: function(f,l) { bindIRI(f,l,function(){return yr2026Lyr;},mode); }
-  });
-  iriLayers[mode].all    = allLyr;
-  iriLayers[mode].yr2026 = yr2026Lyr;
+  updateCountBadge(count, data.features ? data.features.length : 0);
+  return lyr;
+}
+
+function updateCountBadge(shown, total) {
+  var el = document.getElementById('countBadge');
+  if (!el) return;
+  if (shown === total) {
+    el.textContent = total + ' roads';
+  } else {
+    el.textContent = shown + ' / ' + total + ' roads shown';
+  }
 }
 
 // ─────────────────────────────────────────────
-//  FETCH IRI (cached)
+//  FETCH IRI (cached per source)
 // ─────────────────────────────────────────────
 function fetchIRI(mode, cb) {
   if (geoCache[mode]) { cb(geoCache[mode]); return; }
@@ -488,78 +666,502 @@ function fetchClinton(cb) {
 }
 
 // ─────────────────────────────────────────────
+//  LEE COUNTY
+// ─────────────────────────────────────────────
+function toggleLee() {
+  leeOn = !leeOn;
+  document.getElementById('tab-lee').classList.toggle('lee-on', leeOn);
+  if (!leeOn) {
+    if (leeLayer && map.hasLayer(leeLayer)) map.removeLayer(leeLayer);
+    return;
+  }
+  if (leeLayer) {
+    if (!map.hasLayer(leeLayer)) leeLayer.addTo(map);
+    zoomToLee();
+  } else {
+    buildLeeLayer(function() { if (leeOn && !map.hasLayer(leeLayer)) { leeLayer.addTo(map); zoomToLee(); } });
+  }
+}
+
+function zoomToLee() {
+  if (leeLayer) {
+    var b = leeLayer.getBounds();
+    if (b && b.isValid()) map.fitBounds(b, { padding: [40, 40] });
+  }
+}
+
+function getLeeRoadColor(system) {
+  return system === 1 ? '#FF00FF' : '#00FFFF';
+}
+
+function buildLeeLayer(cb) {
+  if (leeLayer) { cb(); return; }
+  showLoading('Loading Lee County roads…', false);
+  fetch('https://pub-256928d690cc446c84032baa7343824c.r2.dev/website/lee_county.geojson')
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(data) {
+      hideLoading();
+      leeLayer = L.geoJSON(data, {
+        style: function(f) {
+          var sys = f.properties.SYSTEM;
+          return { color: getLeeRoadColor(sys), weight: isMobile ? 6 : 3, opacity: 0.9 };
+        },
+        onEachFeature: function(feature, layer) {
+          var p = feature.properties;
+          var roadTypeLabel = p.SYSTEM === 1 ? 'Primary' : 'Secondary';
+          var routeLabel = p.ROUTE_ID || p.RoadName || p.Name || 'Lee County Road';
+          layer.on({
+            mouseover: function(e) { e.target.setStyle({ weight: isMobile ? 12 : 6 }); },
+            mouseout:  function(e) { if (leeLayer) leeLayer.resetStyle(e.target); },
+            click: function(e) {
+              L.DomEvent.stopPropagation(e);
+              layer.setStyle({ weight: isMobile ? 12 : 6 });
+              setTimeout(function() { if (leeLayer) leeLayer.resetStyle(layer); }, 800);
+              showInfo(
+                e.latlng,
+                routeLabel,
+                [
+                  ['Road Type', roadTypeLabel, false],
+                  ['Route',     safe(p.ROUTE),       false],
+                  ['IRI',       safe(p.IRI) + (p.IRI != null && p.IRI !== '' ? ' in/mi' : ''), false],
+                  ['IRI Index', safe(p.IRI_INDX),   false],
+                  ['Speed',     safe(p.SPEED) + (p.SPEED ? ' mph' : ''), false],
+                  ['Lanes',     safe(p.LANES),       false],
+                  ['Length',    safe(p.PMIS_LENGT) + (p.PMIS_LENGT != null ? ' mi' : ''), false],
+                  ['Year',      safe(p.PMISYR),      false]
+                ],
+                'whole', null
+              );
+            }
+          });
+        }
+      });
+      cb();
+    })
+    .catch(function(e) { hideLoading(); console.error('Lee County fetch:', e); });
+}
+
+// ─────────────────────────────────────────────
+//  POLYGON AREA FILTER SELECTION LOGIC
+// ─────────────────────────────────────────────
+var isDrawing = false;
+var drawPoints = [];
+var tempPolyline = null;
+var finalPolygon = null;
+var drawPolyBtn = document.getElementById('drawPolyBtn');
+
+function togglePolyDraw() {
+  if (isDrawing) {
+    cancelPolyDraw();
+  } else {
+    startPolyDraw();
+  }
+}
+
+function startPolyDraw() {
+  isDrawing = true;
+  drawPoints = [];
+  drawPolyBtn.classList.add('active');
+  drawPolyBtn.innerHTML = 'Cancel Draw';
+  
+  if (finalPolygon) { map.removeLayer(finalPolygon); finalPolygon = null; }
+  
+  showGPSStatus('🖱️ Click map to draw polygon. Double-click to finish.');
+  
+  map.on('click', onMapDrawClick);
+  map.on('mousemove', onMapDrawMove);
+}
+
+function cancelPolyDraw() {
+  isDrawing = false;
+  drawPolyBtn.classList.remove('active');
+  drawPolyBtn.innerHTML = 'Filter Area';
+  hideGPSStatus();
+  
+  if (tempPolyline) { map.removeLayer(tempPolyline); tempPolyline = null; }
+  if (finalPolygon) { map.removeLayer(finalPolygon); finalPolygon = null; }
+  
+  map.off('click', onMapDrawClick);
+  map.off('mousemove', onMapDrawMove);
+}
+
+function onMapDrawClick(e) {
+  var latlng = e.latlng;
+  drawPoints.push([latlng.lat, latlng.lng]);
+  
+  if (!tempPolyline) {
+    tempPolyline = L.polyline(drawPoints, {color: 'var(--accent2)', weight: 3, dashArray: '5, 5'}).addTo(map);
+  } else {
+    tempPolyline.setLatLngs(drawPoints);
+  }
+  
+  // Detect double click manual finish condition proxy via identical structural point coordinates
+  if (drawPoints.length > 2) {
+    var p1 = drawPoints[drawPoints.length - 1];
+    var p2 = drawPoints[drawPoints.length - 2];
+    if (Math.abs(p1[0] - p2[0]) < 0.00001 && Math.abs(p1[1] - p2[1]) < 0.00001) {
+      drawPoints.pop(); // pull dummy duplicate
+      finishPolyDraw();
+    }
+  }
+}
+
+function onMapDrawMove(e) {
+  if (drawPoints.length === 0 || !tempPolyline) return;
+  var currentPoints = drawPoints.concat([[e.latlng.lat, e.latlng.lng]]);
+  tempPolyline.setLatLngs(currentPoints);
+}
+
+// Attach explicit double click callback execution fallback hook directly to Leaflet layer mechanics
+map.on('dblclick', function(e) {
+  if (isDrawing && drawPoints.length > 2) {
+    L.DomEvent.stopPropagation(e);
+    finishPolyDraw();
+  }
+});
+
+function finishPolyDraw() {
+  isDrawing = false;
+  drawPolyBtn.classList.remove('active');
+  drawPolyBtn.innerHTML = 'Clear Selection';
+  drawPolyBtn.onclick = clearPolyFilter;
+  
+  map.off('click', onMapDrawClick);
+  map.off('mousemove', onMapDrawMove);
+  if (tempPolyline) { map.removeLayer(tempPolyline); tempPolyline = null; }
+  
+  if (drawPoints.length < 3) {
+    showGPSStatus('⚠️ Not enough points drawn.', 3000);
+    clearPolyFilter();
+    return;
+  }
+  
+  finalPolygon = L.polygon(drawPoints, {color: 'var(--accent2)', fillColor: 'var(--accent2)', fillOpacity: 0.15, weight: 3}).addTo(map);
+  calculateAreaMetrics();
+}
+
+function clearPolyFilter() {
+  if (finalPolygon) { map.removeLayer(finalPolygon); finalPolygon = null; }
+  hideGPSStatus();
+  drawPolyBtn.innerHTML = 'Filter Area';
+  drawPolyBtn.onclick = togglePolyDraw;
+  closeInfo();
+}
+
+// Ray-casting point-in-polygon helper
+function isPointInPolygon(point, vs) {
+  var x = point[0], y = point[1];
+  var inside = false;
+  for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+    var xi = vs[i][0], yi = vs[i][1];
+    var xj = vs[j][0], yj = vs[j][1];
+    var intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+/*
+function calculateAreaMetrics() {
+  var activeData = geoCache[currentMode];
+  if (!activeData || !activeData.features) {
+    showGPSStatus('No active layer lines to sample.', 3000);
+    return;
+  }
+  
+  var sumIRI = 0;
+  var validCount = 0;
+  var totalMiles = 0;
+  
+  activeData.features.forEach(function(f) {
+    if (!featureInDateRange(f)) return; // obey date filters
+    
+    // Evaluate via geometric bounds centroid baseline
+    if (f.geometry && f.geometry.coordinates) {
+      var coords = f.geometry.coordinates;
+      var samplePoint = null;
+      
+      if (f.geometry.type === 'LineString') {
+        // Grab middle segment vertex point coordinate
+        var midIdx = Math.floor(coords.length / 2);
+        samplePoint = [coords[midIdx][1], coords[midIdx][0]]; // flip to lat,lng
+      } else if (f.geometry.type === 'MultiLineString') {
+        var midLine = coords[Math.floor(coords.length / 2)];
+        samplePoint = [midLine[Math.floor(midLine.length / 2)][1], midLine[Math.floor(midLine.length / 2)][0]];
+      }
+      
+      if (samplePoint && isPointInPolygon(samplePoint, drawPoints)) {
+        var p = f.properties;
+        var iriVal = currentMode === 'segment' ? p.iri_in_mi : p.whole_iri_in_mi;
+        var lenVal = currentMode === 'segment' ? p.seg_len_mi : p.whole_len_mi;
+        
+        if (iriVal != null && !isNaN(iriVal)) {
+          sumIRI += (+iriVal);
+          validCount++;
+        }
+        if (lenVal != null && !isNaN(lenVal)) {
+          totalMiles += (+lenVal);
+        }
+      }
+    }
+  });
+  
+  if (validCount === 0) {
+    showGPSStatus('📊 No matching road lines inside selected polygon.');
+    return;
+  }
+  
+  var meanIRI = (sumIRI / validCount).toFixed(1);
+  var bounds = finalPolygon.getBounds();
+  
+  // Render analytical metrics summary payload to interface via standard popup mechanics
+  var rows = [
+    ['Avg IRI Value', meanIRI + ' in/mi', true],
+    ['Captured Sample Size', validCount + ' features', false],
+    ['Aggregated Length', totalMiles.toFixed(2) + ' mi', false]
+  ];
+  
+  // Use 'Good' rating color template dynamically if it trends safely under average index metrics limits
+  var dummyClass = meanIRI < 95 ? 'Good' : (meanIRI < 135 ? 'Fair' : 'Bad');
+  showInfo(bounds.getCenter(), 'Selected Area Analysis', rows, currentMode, null);
+}
+*/
+
+function normalizeRoadType(rt) {
+
+  rt = (rt || '').toLowerCase();
+
+  if (
+      rt.includes('interstate') ||
+      rt.includes('highway') ||
+      rt.includes('state')
+  ) return 'Highway';
+
+  if (rt.includes('county'))
+      return 'County Road';
+
+  if (
+      rt.includes('city') ||
+      rt.includes('street') ||
+      rt.includes('municipal')
+  ) return 'City Street';
+
+  return 'Other';
+}
+
+function calculateAreaMetrics() {
+
+  var activeData = geoCache[currentMode];
+
+  if (!activeData || !activeData.features) {
+    showGPSStatus('No active layer lines to sample.', 3000);
+    return;
+  }
+
+  var stats = {};
+
+  activeData.features.forEach(function(f) {
+
+    if (!featureInDateRange(f)) return;
+
+    if (!f.geometry || !f.geometry.coordinates) return;
+
+    var coords = f.geometry.coordinates;
+    var samplePoint = null;
+
+    if (f.geometry.type === 'LineString') {
+
+      var midIdx = Math.floor(coords.length / 2);
+
+      samplePoint = [
+        coords[midIdx][1],
+        coords[midIdx][0]
+      ];
+
+    } else if (f.geometry.type === 'MultiLineString') {
+
+      var midLine = coords[Math.floor(coords.length / 2)];
+
+      samplePoint = [
+        midLine[Math.floor(midLine.length / 2)][1],
+        midLine[Math.floor(midLine.length / 2)][0]
+      ];
+    }
+
+    if (
+      samplePoint &&
+      isPointInPolygon(samplePoint, drawPoints)
+    ) {
+
+      var p = f.properties;
+
+      var iriVal =
+        currentMode === 'segment'
+          ? p.iri_in_mi
+          : p.whole_iri_in_mi;
+
+      var lenVal =
+        currentMode === 'segment'
+          ? p.seg_len_mi
+          : p.whole_len_mi;
+
+      var roadType = normalizeRoadType(p.road_type);
+
+      if (!stats[roadType]) {
+
+        stats[roadType] = {
+          length: 0,
+          iriLengthSum: 0,
+          featureCount: 0
+        };
+      }
+
+      if (
+        lenVal != null &&
+        !isNaN(lenVal)
+      ) {
+
+        stats[roadType].length += (+lenVal);
+      }
+
+      if (
+        iriVal != null &&
+        !isNaN(iriVal) &&
+        lenVal != null &&
+        !isNaN(lenVal)
+      ) {
+
+        stats[roadType].iriLengthSum +=
+          (+iriVal) * (+lenVal);
+
+        stats[roadType].featureCount++;
+      }
+    }
+  });
+
+  if (Object.keys(stats).length === 0) {
+
+    showGPSStatus(
+      '📊 No matching road lines inside selected polygon.'
+    );
+
+    return;
+  }
+
+  var rows = [];
+
+  var displayOrder = [
+    'Highway',
+    'County Road',
+    'City Street',
+    'Other'
+  ];
+
+  displayOrder.forEach(function(type) {
+
+    if (!stats[type]) return;
+
+    var length = stats[type].length;
+
+    var avgIRI =
+      length > 0
+        ? stats[type].iriLengthSum / length
+        : null;
+
+    rows.push([
+      type + ' Length',
+      length.toFixed(2) + ' mi',
+      false
+    ]);
+
+    rows.push([
+      type + ' Avg IRI',
+      avgIRI
+        ? avgIRI.toFixed(1) + ' in/mi'
+        : 'N/A',
+      false
+    ]);
+
+    rows.push([
+      type + ' Roads',
+      stats[type].featureCount,
+      false
+    ]);
+  });
+
+  var bounds = finalPolygon.getBounds();
+
+  showInfo(
+    bounds.getCenter(),
+    'Selected Area Summary',
+    rows,
+    currentMode,
+    null
+  );
+}
+
+// ─────────────────────────────────────────────
 //  RENDER MAP
 // ─────────────────────────────────────────────
 function renderMap(fitView) {
   var mode = currentMode;
 
+  // Remove current IRI layers from both modes
   ['whole','segment'].forEach(function(m) {
-    ['all','yr2026'].forEach(function(k) {
-      var l = iriLayers[m][k]; if (l && map.hasLayer(l)) map.removeLayer(l);
-    });
+    if (iriLayer[m] && map.hasLayer(iriLayer[m])) map.removeLayer(iriLayer[m]);
   });
 
-  function applyLayers() {
-    if (iriAllOn) {
-      var lyr = iriLayers[mode].all;
-      if (lyr) {
-        lyr.addTo(map);
-        if (fitView) { var b=lyr.getBounds(); if(b&&b.isValid()) map.fitBounds(b,{padding:[50,50]}); }
-      }
-    }
-    if (iri2026On) {
-      var lyr2 = iriLayers[mode].yr2026;
-      if (lyr2) {
-        lyr2.addTo(map);
-        if (fitView) { var b2=lyr2.getBounds(); if(b2&&b2.isValid()) map.fitBounds(b2,{padding:[50,50]}); }
-      }
+  function applyLayers(data) {
+    // Remove old layer for this mode
+    if (iriLayer[mode] && map.hasLayer(iriLayer[mode])) map.removeLayer(iriLayer[mode]);
+    iriLayer[mode] = buildFilteredLayer(data, mode);
+    iriLayer[mode].addTo(map);
+    if (fitView) {
+      var b = iriLayer[mode].getBounds();
+      if (b && b.isValid()) map.fitBounds(b, { padding:[50,50] });
     }
     if (clintonOn && clintonLayer && !map.hasLayer(clintonLayer)) clintonLayer.addTo(map);
+    if (leeOn && leeLayer && !map.hasLayer(leeLayer)) leeLayer.addTo(map);
   }
 
-  if (!iriLayers[mode].all) {
-    fetchIRI(mode, function(data) { buildIRILayers(data, mode); applyLayers(); });
+  if (!geoCache[mode]) {
+    fetchIRI(mode, function(data) { applyLayers(data); });
   } else {
-    applyLayers();
+    applyLayers(geoCache[mode]);
   }
 }
 
 // ─────────────────────────────────────────────
-//  MODE TOGGLE  Whole ↔ Segment
+//  MODE TOGGLE
 // ─────────────────────────────────────────────
 function setMode(mode) {
   if (mode===currentMode) return;
   currentMode = mode;
   document.getElementById('modeWhole').classList.toggle('active', mode==='whole');
   document.getElementById('modeSeg').classList.toggle('active',   mode==='segment');
-  syncTabColors();
-  renderMap(false);  // never re-fit on mode toggle — preserve current zoom
+  renderMap(false);
   closeInfo();
 }
 
 // ─────────────────────────────────────────────
-//  SOURCE TOGGLE  Cyroid ↔ SmartBox
+//  SOURCE TOGGLE
 // ─────────────────────────────────────────────
 function setSource(src) {
   if (src === currentSource) return;
   currentSource = src;
   URLS = src === 'smartbox' ? URLS_SMARTBOX : URLS_CYROID;
 
-  // Clear all cached data and layers for both modes
   ['whole','segment'].forEach(function(m) {
-    ['all','yr2026'].forEach(function(k) {
-      var l = iriLayers[m][k];
-      if (l && map.hasLayer(l)) map.removeLayer(l);
-      iriLayers[m][k] = null;
-    });
+    if (iriLayer[m] && map.hasLayer(iriLayer[m])) map.removeLayer(iriLayer[m]);
+    iriLayer[m] = null;
     geoCache[m] = null;
   });
 
-  // Restore Clinton if it was on
   if (clintonOn && clintonLayer && !map.hasLayer(clintonLayer)) clintonLayer.addTo(map);
+  if (leeOn && leeLayer && !map.hasLayer(leeLayer)) leeLayer.addTo(map);
 
   syncSourceColors();
-  renderMap(false);  // never re-fit on source toggle — preserve current zoom
+  renderMap(false);
   closeInfo();
 }
 
@@ -568,22 +1170,6 @@ function syncSourceColors() {
   document.getElementById('srcCyroid').classList.toggle('active',  isCyroid);
   document.getElementById('srcSmartBox').classList.toggle('active', !isCyroid);
   document.getElementById('srcSmartBox').classList.toggle('sb-pill', !isCyroid);
-}
-
-// ─────────────────────────────────────────────
-//  IRI TABS — both can be off; turning one on turns the other off
-// ─────────────────────────────────────────────
-function setIRI(name) {
-  if (name === 'all') {
-    iriAllOn  = !iriAllOn;
-    if (iriAllOn) iri2026On = false;
-  } else {
-    iri2026On  = !iri2026On;
-    if (iri2026On) iriAllOn = false;
-  }
-  syncTabColors();
-  renderMap(false);   // never re-fit on tab switch
-  closeInfo();
 }
 
 // ─────────────────────────────────────────────
@@ -604,16 +1190,130 @@ function toggleClinton() {
 }
 
 // ─────────────────────────────────────────────
-//  SYNC TAB COLOURS
+//  DATE RANGE DROPDOWN
 // ─────────────────────────────────────────────
-function syncTabColors() {
-  var isSeg = currentMode==='segment';
-  var btnAll  = document.getElementById('tab-all');
-  var btn2026 = document.getElementById('tab-2026');
-  btnAll.classList.toggle('iri-on',    iriAllOn);
-  btnAll.classList.toggle('seg-mode',  iriAllOn  && isSeg);
-  btn2026.classList.toggle('iri-on',   iri2026On);
-  btn2026.classList.toggle('seg-mode', iri2026On && isSeg);
+var ddOpen = false;
+var ddEl   = document.getElementById('dateDropdown');
+var btnEl  = document.getElementById('dateRangeBtn');
+
+function toggleDateDropdown() {
+  ddOpen = !ddOpen;
+  ddEl.classList.toggle('open', ddOpen);
+  btnEl.classList.toggle('active', ddOpen);
+  if (ddOpen) updateCountBadgeFromCache();
+}
+
+function closeDateDropdown() {
+  ddOpen = false;
+  ddEl.classList.remove('open');
+  btnEl.classList.remove('active');
+}
+
+// Close on outside click
+document.addEventListener('click', function(e) {
+  if (ddOpen && !ddEl.contains(e.target) && e.target !== btnEl && !btnEl.contains(e.target)) {
+    closeDateDropdown();
+  }
+});
+
+function setAllPresets(active) {
+  ['all','2026','2025','2024','1mo','1w'].forEach(function(id) {
+    var el = document.getElementById('preset-'+id);
+    if (el) el.classList.toggle('active', id === active);
+  });
+  activePreset = active;
+}
+
+function applyPreset(preset) {
+  setAllPresets(preset);
+  var now = new Date();
+  dateFrom = null;
+  dateTo   = null;
+
+  if (preset === '2026') {
+    dateFrom = new Date('2026-01-01');
+    dateTo   = new Date('2026-12-31T23:59:59');
+  } else if (preset === '2025') {
+    dateFrom = new Date('2025-01-01');
+    dateTo   = new Date('2025-12-31T23:59:59');
+  } else if (preset === '2024') {
+    dateFrom = new Date('2024-01-01');
+    dateTo   = new Date('2024-12-31T23:59:59');
+  } else if (preset === '1mo') {
+    // Last 1 month
+    dateFrom = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+  } else if (preset === '1w') {
+    // Last 1 week
+    dateFrom = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+  }
+
+  // Sync month inputs
+  document.getElementById('fromMonth').value = dateFrom ? toMonthInput(dateFrom) : '';
+  document.getElementById('toMonth').value   = dateTo   ? toMonthInput(dateTo)   : '';
+
+  syncDateBtn();
+  refilter();
+}
+
+function applyCustomRange() {
+  var fromVal = document.getElementById('fromMonth').value;
+  var toVal   = document.getElementById('toMonth').value;
+
+  dateFrom = fromVal ? new Date(fromVal + '-01') : null;
+  dateTo   = toVal   ? new Date(toVal   + '-01') : null;
+  if (dateTo) {
+    // End of the selected month
+    dateTo = new Date(dateTo.getFullYear(), dateTo.getMonth()+1, 0, 23, 59, 59);
+  }
+
+  setAllPresets('custom');
+  syncDateBtn();
+  refilter();
+  closeDateDropdown();
+}
+
+function toMonthInput(d) {
+  var y = d.getFullYear();
+  var m = String(d.getMonth()+1).padStart(2,'0');
+  return y + '-' + m;
+}
+
+function syncDateBtn() {
+  var label = 'IRI All';
+  var isFiltered = !!(dateFrom || dateTo);
+  if (dateFrom && dateTo) {
+    var fy = dateFrom.getFullYear(), fm = dateFrom.getMonth()+1;
+    var ty = dateTo.getFullYear(),   tm = dateTo.getMonth()+1;
+    if (fy === ty && fm > 1 && tm < 12) {
+      label = 'IRI ' + fy;
+    } else {
+      label = toMonthInput(dateFrom) + ' → ' + toMonthInput(dateTo);
+    }
+  } else if (dateFrom) {
+    label = 'From ' + toMonthInput(dateFrom);
+  } else if (dateTo) {
+    label = 'Until ' + toMonthInput(dateTo);
+  }
+  document.getElementById('dateRangeBtnLabel').textContent = label;
+  btnEl.classList.toggle('filtered', isFiltered);
+}
+
+function refilter() {
+  // Invalidate built layers — rebuild from cached raw data
+  ['whole','segment'].forEach(function(m) {
+    if (iriLayer[m] && map.hasLayer(iriLayer[m])) map.removeLayer(iriLayer[m]);
+    iriLayer[m] = null;
+  });
+  renderMap(false);
+  closeInfo();
+}
+
+function updateCountBadgeFromCache() {
+  var data = geoCache[currentMode];
+  if (!data || !data.features) { document.getElementById('countBadge').textContent = ''; return; }
+  var shown = 0;
+  data.features.forEach(function(f) { if (featureInDateRange(f)) shown++; });
+  updateCountBadge(shown, data.features.length);
 }
 
 // ─────────────────────────────────────────────
@@ -622,9 +1322,14 @@ function syncTabColors() {
 fetchClinton(function() {
   if (clintonOn && !map.hasLayer(clintonLayer)) clintonLayer.addTo(map);
 });
-syncTabColors();
+buildLeeLayer(function() {
+  if (leeLayer) {
+    var b = leeLayer.getBounds();
+    if (b && b.isValid()) map.fitBounds(b, { padding: [40, 40] });
+  }
+});
 syncSourceColors();
-renderMap(true);   // fit on first load only
+renderMap(false);
 
 // ─────────────────────────────────────────────
 //  GPS

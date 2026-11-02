@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MCO Drone Data</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f5f6f8;
+      --border: #dde0e8;
+      --text: #1a1d27;
+      --muted: #7a7f9a;
+      --accent: #1a6ef5;
+      --topbar-h: 38px;
+      --radius: 8px;
+    }
+    
+    html, body {
+      height: 100%;
+      width: 100%;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    /* TOP BAR */
+    #topbar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--topbar-h);
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    #topbar h1 {
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    /* FULL MAP */
+    #map {
+      position: absolute;
+      top: var(--topbar-h);
+      bottom: 0;
+      left: 0;
+      right: 0;
+    }
+
+    /* SCALE BAR STYLING */
+    .leaflet-control-scale-line {
+      border: 2px solid var(--text) !important;
+      border-top: none !important;
+      color: var(--text) !important;
+      background: rgba(255, 255, 255, 0.8) !important;
+      font-family: 'DM Mono', monospace !important;
+      font-size: 10px !important;
+      font-weight: 500 !important;
+      padding: 2px 5px !important;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1) !important;
+    }
+
+    /* LOADING TOAST */
+    #loadingToast {
+      position: absolute;
+      top: calc(var(--topbar-h) + 10px);
+      right: 12px;
+      z-index: 1000;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      transition: opacity 0.25s, visibility 0.25s;
+    }
+    #loadingToast.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .spinner {
+      width: 12px;
+      height: 12px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* POPUP STYLING */
+    .leaflet-popup-content-wrapper {
+      border-radius: var(--radius) !important;
+      border: 1px solid var(--border) !important;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
+      font-family: 'DM Sans', sans-serif !important;
+      font-size: 12px !important;
+      padding: 4px !important;
+    }
+    .popup-kv-row {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 3px 8px;
+      padding: 2px 0;
+    }
+    .popup-key { color: var(--muted); font-weight: 500; }
+    .popup-val { font-family: 'DM Mono', monospace; color: var(--text); }
+  </style>
+</head>
+<body>
+
+  <div id="topbar">
+    <h1>MCO Drone Data</h1>
+  </div>
+
+  <div id="map"></div>
+
+  <div id="loadingToast">
+    <div class="spinner"></div>
+    <span id="loadingMsg">Loading MCO_data.geojson…</span>
+  </div>
+
+  <script>
+    // 1. Initialize Map (Default centered near Orlando International Airport / MCO)
+    var map = L.map('map', {
+      center: [28.4294, -81.3089],
+      zoom: 14,
+      zoomControl: true
+    });
+
+    // 2. Base OpenStreetMap Tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 21,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // 3. Add Metric & Imperial Scale Bar
+    L.control.scale({
+      position: 'bottomleft',
+      metric: true,
+      imperial: true,
+      maxWidth: 140
+    }).addTo(map);
+
+    // 4. Fetch and display "MCO_data.geojson"
+    var loadingToast = document.getElementById('loadingToast');
+
+    fetch('MCO_data.geojson')
+      .then(function(res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function(data) {
+        var geojsonLayer = L.geoJSON(data, {
+          style: function(feature) {
+            return {
+              color: '#1a6ef5',
+              weight: 3,
+              opacity: 0.85
+            };
+          },
+          pointToLayer: function(feature, latlng) {
+            return L.circleMarker(latlng, {
+              radius: 4,
+              fillColor: '#1a6ef5',
+              color: '#ffffff',
+              weight: 1.5,
+              opacity: 1,
+              fillOpacity: 0.85
+            });
+          },
+          onEachFeature: function(feature, layer) {
+            if (feature.properties) {
+              var props = feature.properties;
+              var popupHtml = '<div style="max-height: 220px; overflow-y: auto; padding: 4px;">';
+              for (var key in props) {
+                if (props.hasOwnProperty(key)) {
+                  popupHtml += '<div class="popup-kv-row">' +
+                                 '<span class="popup-key">' + key + ':</span>' +
+                                 '<span class="popup-val">' + props[key] + '</span>' +
+                               '</div>';
+                }
+              }
+              popupHtml += '</div>';
+              layer.bindPopup(popupHtml);
+            }
+          }
+        }).addTo(map);
+
+        // Zoom fit to data extent
+        var bounds = geojsonLayer.getBounds();
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [30, 30] });
+        }
+
+        loadingToast.classList.add('hidden');
+      })
+      .catch(function(err) {
+        console.error('Error loading MCO_data.geojson:', err);
+        document.getElementById('loadingMsg').textContent = 'Failed to load MCO_data.geojson';
+      });
+  </script>
+</body>
+</html>

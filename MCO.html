@@ -170,7 +170,7 @@
     // 4. Fetch and display "MCO_data.geojson"
     var loadingToast = document.getElementById('loadingToast');
 
-    fetch('MCO_data.geojson')
+    fetch('MCO_filtered.geojson')
       .then(function(res) {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();

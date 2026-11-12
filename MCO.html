@@ -243,13 +243,10 @@
         var geojsonLayer = L.geoJSON(data, {
           pointToLayer: function(feature, latlng) {
             var marker = L.circleMarker(latlng, {
-              radius: getMarkerRadius(currentZoom),
-              fillColor: '#00e5ff',
-              color: '#ffffff',
-              weight: getStrokeWeight(currentZoom),
-              opacity: 1,
-              fillOpacity: 0.85
-            });
+            radius: getMarkerRadius(currentZoom),
+            stroke: false,
+            fillColor: '#c05050',
+            fillOpacity: 0.85});
             pointLayers.push(marker);
             return marker;
           },

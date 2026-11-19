@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' />
+  <title>Project 5: E&amp;S Control Measures</title>
+
+  <!-- Leaflet + COG support (georaster reads Cloud Optimized GeoTIFFs straight from S3) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/cog-layers.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+  <script src="https://unpkg.com/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
+  <script src="https://unpkg.com/georaster-layer-for-leaflet@3.10.0/dist/georaster-layer-for-leaflet.min.js"></script>
+  <script src="js/cog-layers.js"></script>
+
+  <style>
+    body { margin:0; padding:0; }
+    body, table, tr, td, th, div, h1, h2, input {
+      font-family: "Calibri", "Trebuchet MS", "Ubuntu", Serif;
+      font-size: 11pt;
+    }
+
+    /* Full-width top title bar */
+    #topTitle {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 50px;
+      background-color: #C8102E;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18pt;
+      font-weight: bold;
+      z-index: 1000;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      padding: 0 10px;
+      overflow: hidden;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    #topTitle a {
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+      margin-right: 20px;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    #topTitle span.titleText {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 1;
+    }
+
+    @media (max-width: 400px) {
+      #topTitle { font-size: 14pt; }
+    }
+
+    /* Map fills remaining space below title */
+    #map { position:absolute; top:50px; bottom:0; width:100%; }
+
+    .ctl {
+      padding: 2px 10px;
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      border-radius: 5px;
+      text-align: right;
+    }
+
+    .src { font-size: 10pt; }
+    .leaflet-control-layers-overlays label { white-space: nowrap; }
+    .leaflet-control-layers-list { max-height: calc(100vh - 140px); overflow-y: auto; overflow-x: hidden; }
+    .layer-group-head { font-weight: bold; margin: 6px 0 2px; color: #C8102E; }
+  </style>
+</head>
+<body>
+
+  <!-- Full-width top title -->
+  <div id="topTitle">
+    <a href="https://prosperiastate.github.io/">Home</a>
+    <span class="titleText">Project 5: E&amp;S Control Measures</span>
+  </div>
+
+  <!-- Map -->
+  <div id="map"></div>
+
+  <script>
+    // ==========================
+    // Base Layers
+    // ==========================
+    var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors',
+      minZoom: 15, maxZoom: 26, maxNativeZoom: 19
+    });
+
+    var white = L.tileLayer(
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEAAQMAAABmvDolAAAAA1BMVEX///+nxBvIAAAAH0lEQVQYGe3BAQ0AAADCIPunfg43YAAAAAAAAAAA5wIhAAAB9aK9BAAAAABJRU5ErkJggg==",
+      {minZoom: 15, maxZoom: 26}
+    );
+
+    var googleSat = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+      maxZoom: 26, maxNativeZoom: 20,
+      subdomains:['mt0','mt1','mt2','mt3'],
+      attribution: 'Map data © Google'
+    });
+
+    var basemaps = {
+      "Open Street Map": osm,
+      "Google": googleSat,
+      "Without background": white
+    };
+
+    // ==========================
+    // Overlay Layers (COGs in S3 bucket drone-cogs-sourav)
+    //   kind: rgba | rgb | hillshade | dem | thermal
+    //   bounds: [[south, west], [north, east]] read from each COG
+    // ==========================
+    // Oskaloosa site
+    var O_Astro_RGB = L.cogLayer({"label": "Oskaloosa_Astro RGB 0.67 cm", "key": "Project_5_ES_Control/Oskaloosa/09232025_Astro_RGB.tif", "kind": "rgba", "site": "oskaloosa", "bounds": [[41.3142832, -92.7050992], [41.3230996, -92.6954628]]});
+    var O_Astro_hillshade = L.cogLayer({"label": "Oskaloosa_Astro Hillshade 2.7 cm", "key": "Project_5_ES_Control/Oskaloosa/09232025_Astro_Hillshade.tif", "kind": "hillshade", "site": "oskaloosa", "bounds": [[41.3142833, -92.7050992], [41.3230996, -92.6954629]], "epsg": 3857});
+    var O_Astro_DEM = L.cogLayer({"label": "Oskaloosa_Astro DEM 2.7 cm", "key": "Project_5_ES_Control/Oskaloosa/09232025_Astro_DEM.tif", "kind": "dem", "site": "oskaloosa", "bounds": [[41.3142833, -92.7050992], [41.3230996, -92.6954629]], "min": 241.59, "max": 257.28, "nodata": -32767});
+    var O_M3M_RGB = L.cogLayer({"label": "Oskaloosa_M3M RGB 1.6 cm", "key": "Project_5_ES_Control/Oskaloosa/09232025_M3M_RGB.tif", "kind": "rgba", "site": "oskaloosa", "bounds": [[41.3144104, -92.7050513], [41.3230269, -92.6955981]]});
+    var O_M3M_hillshade = L.cogLayer({"label": "Oskaloosa_M3M Hillshade 6.3 cm", "key": "Project_5_ES_Control/Oskaloosa/09232025_M3M_Hillshade.tif", "kind": "hillshade", "site": "oskaloosa", "bounds": [[41.3144106, -92.7050513], [41.3230267, -92.695598]], "epsg": 3857});
+    var O_M3M_DEM = L.cogLayer({"label": "Oskaloosa_M3M DEM 6.3 cm", "key": "Project_5_ES_Control/Oskaloosa/09232025_M3M_DEM.tif", "kind": "dem", "site": "oskaloosa", "bounds": [[41.3144106, -92.7050513], [41.3230269, -92.695598]], "min": 241.47, "max": 257.55, "nodata": -32767});
+    var O_Thermal = L.cogLayer({"label": "Oskaloosa_M2EA Thermal 12 cm", "key": "Project_5_ES_Control/Oskaloosa/09232025_M2EA Thermal.tif", "kind": "rgba", "site": "oskaloosa", "bounds": [[41.3138118, -92.7059213], [41.3237626, -92.6947977]]});
+
+    // Mediapolis site
+    var M_Astro_RGB = L.cogLayer({"label": "Media_Astro RGB 0.68 cm", "key": "Project_5_ES_Control/Mediapolis/Mediapolis_Astro_200_RGB.tif", "kind": "rgba", "site": "mediapolis", "bounds": [[41.0591829, -91.1795372], [41.0684606, -91.1703261]]});
+    var M_Astro_200_hill = L.cogLayer({"label": "Media_Astro Hillshade 1.35 cm", "key": "Project_5_ES_Control/Mediapolis/Mediapolis_Astro_200_Hillshade.tif", "kind": "hillshade", "site": "mediapolis", "bounds": [[41.0599077, -91.1795149], [41.0684145, -91.1730413]], "epsg": 6344});
+    var M_Astro_DEM = L.cogLayer({"label": "Media_Astro DEM 1.35 cm", "key": "Project_5_ES_Control/Mediapolis/Mediapolis_Astro_200_DEM_1.35.tif", "kind": "dem", "site": "mediapolis", "bounds": [[41.0599077, -91.1795149], [41.0684145, -91.1730413]], "min": 204.39, "max": 223.86, "nodata": -32767});
+    var M_M3M_RGB = L.cogLayer({"label": "Media_M3M RGB 0.83 cm", "key": "Project_5_ES_Control/Mediapolis/Mediapolis_M3M_RGB.tif", "kind": "rgba", "site": "mediapolis", "bounds": [[41.0589597, -91.1792212], [41.0689216, -91.1721704]]});
+    var M_M3M_hillshade = L.cogLayer({"label": "Media_M3M Hillshade 1.67 cm", "key": "Project_5_ES_Control/Mediapolis/Mediapolis_M3M_Hillshade.tif", "kind": "hillshade", "site": "mediapolis", "bounds": [[41.0589599, -91.1792211], [41.0689217, -91.1721705]], "epsg": 6344});
+    var M_M3M_DEM = L.cogLayer({"label": "Media_M3M DEM 1.67 cm", "key": "Project_5_ES_Control/Mediapolis/Mediapolis_M3M_DEM.tif", "kind": "dem", "site": "mediapolis", "bounds": [[41.0589599, -91.1792211], [41.0689217, -91.1721705]], "min": 204.97, "max": 222.15, "nodata": -32767});
+    var M_Thermal = L.cogLayer({"label": "Media_M2EA Thermal 13 cm", "key": "Project_5_ES_Control/Mediapolis/Media_M2EA_thermal_jpg.tif", "kind": "rgba", "site": "mediapolis", "bounds": [[41.0585953, -91.1803508], [41.0695999, -91.1711943]]});
+
+    // Mediapolis south (about 5 km south of the main site)
+    var MS_Thermal = L.cogLayer({"label": "Media_South Thermal 2.8 cm", "key": "Project_5_ES_Control/Mediapolis/Mediapolis_South_thermal.tif", "kind": "rgba", "site": "mediapolis_south", "bounds": [[41.0102906, -91.1748915], [41.0108705, -91.1741695]]});
+
+    // Altoona site
+    var A_RGB = L.cogLayer({"label": "Altoona RGB 0.3 cm", "key": "Project_5_ES_Control/Altoona/Altoona_RGB.tif", "kind": "rgba", "site": "altoona", "bounds": [[41.652317, -93.5661833], [41.653672, -93.5634723]]});
+    var A_DEM = L.cogLayer({"label": "Altoona DEM 0.9 cm", "key": "Project_5_ES_Control/Altoona/Altoona_DEM.tif", "kind": "dem", "site": "altoona", "bounds": [[41.6523111, -93.5661696], [41.6536723, -93.5634681]], "min": 276.71, "max": 294.3, "nodata": -32767});
+
+    var overlaymaps = {
+      "Oskaloosa_Astro RGB 0.67 cm": O_Astro_RGB,
+      "Oskaloosa_Astro Hillshade 2.7 cm": O_Astro_hillshade,
+      "Oskaloosa_Astro DEM 2.7 cm": O_Astro_DEM,
+      "Oskaloosa_M3M RGB 1.6 cm": O_M3M_RGB,
+      "Oskaloosa_M3M Hillshade 6.3 cm": O_M3M_hillshade,
+      "Oskaloosa_M3M DEM 6.3 cm": O_M3M_DEM,
+      "Oskaloosa_M2EA Thermal 12 cm": O_Thermal,
+      "Media_Astro RGB 0.68 cm": M_Astro_RGB,
+      "Media_Astro Hillshade 1.35 cm": M_Astro_200_hill,
+      "Media_Astro DEM 1.35 cm": M_Astro_DEM,
+      "Media_M3M RGB 0.83 cm": M_M3M_RGB,
+      "Media_M3M Hillshade 1.67 cm": M_M3M_hillshade,
+      "Media_M3M DEM 1.67 cm": M_M3M_DEM,
+      "Media_M2EA Thermal 13 cm": M_Thermal,
+      "Media_South Thermal 2.8 cm": MS_Thermal,
+      "Altoona RGB 0.3 cm": A_RGB,
+      "Altoona DEM 0.9 cm": A_DEM
+    };
+    var allLayers = [O_Astro_RGB, O_Astro_hillshade, O_Astro_DEM, O_M3M_RGB, O_M3M_hillshade, O_M3M_DEM, O_Thermal, M_Astro_RGB, M_Astro_200_hill, M_Astro_DEM, M_M3M_RGB, M_M3M_hillshade, M_M3M_DEM, M_Thermal, MS_Thermal, A_RGB, A_DEM];
+
+    // ==========================
+    // Initialize Map
+    // ==========================
+    var map = L.map('map', {
+      center: [41.3187, -92.7002],
+      zoom: 16,
+      minZoom: 15,
+      maxZoom: 26,
+      layers: [osm, O_Astro_RGB] // Default base + overlay
+    });
+
+    // Toggle button for the layer list
+    var toggleButton = L.control({position: 'topright'});
+    toggleButton.onAdd = function(map) {
+      var div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+      var link = L.DomUtil.create('a', '', div);
+      link.innerHTML = '_';  // menu icon
+      link.href = '#';
+      link.title = 'Toggle layer list';
+
+      L.DomEvent.on(link, 'click', function(e) {
+        L.DomEvent.stop(e);
+        var control = document.querySelector('.leaflet-control-layers');
+        if (control.style.display === 'none') {
+          control.style.display = 'block';
+        } else {
+          control.style.display = 'none';
+        }
+      });
+
+      return div;
+    };
+    toggleButton.addTo(map);
+
+    L.control.layers(basemaps, overlaymaps, {collapsed:false}).addTo(map);
+    L.control.scale({position: 'bottomleft'}).addTo(map);
+
+    // ==========================
+    // Fit Bounds Logic: zoom to a site when one of its layers is switched on
+    // ==========================
+    var siteBounds = L.cogLayer.fitOnSwitch(map, allLayers, 'oskaloosa');
+    
+
+    // ==========================
+    // Bottom-left note
+    // ==========================
+    var src = 'Hosted by ISU PROSPER Team';
+    var note = L.control({position: 'bottomleft'});
+    note.onAdd = function(map) {
+      this._div = L.DomUtil.create('div', 'ctl src');
+      this.update();
+      return this._div;
+    };
+    note.update = function() { this._div.innerHTML = src; };
+    note.addTo(map);
+  </script>
+
+</body>
+</html>

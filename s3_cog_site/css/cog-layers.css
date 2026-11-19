@@ -1,0 +1,8 @@
+/* Styles for the COG legend and loading messages (used with js/cog-layers.js) */
+.cog-legend { min-width: 170px; text-align: left; padding: 6px 10px; }
+.cog-legend-item + .cog-legend-item { margin-top: 8px; }
+.cog-legend-title { font-weight: bold; font-size: 10pt; margin-bottom: 3px; }
+.cog-legend-bar { height: 10px; border-radius: 2px; border: 1px solid rgba(0,0,0,0.25); }
+.cog-legend-scale { display: flex; justify-content: space-between; font-size: 9pt; margin-top: 2px; }
+.cog-status { text-align: left; padding: 4px 10px; font-size: 10pt; display: none; }
+.cog-status .cog-err { color: #b00020; font-weight: bold; }

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' />
+  <title>Project 2: Gravel Road Inspection</title>
+
+  <!-- Leaflet + COG support (georaster reads Cloud Optimized GeoTIFFs straight from S3) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/cog-layers.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+  <script src="https://unpkg.com/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
+  <script src="https://unpkg.com/georaster-layer-for-leaflet@3.10.0/dist/georaster-layer-for-leaflet.min.js"></script>
+  <script src="js/cog-layers.js"></script>
+
+  <style>
+    body { margin:0; padding:0; }
+    body, table, tr, td, th, div, h1, h2, input {
+      font-family: "Calibri", "Trebuchet MS", "Ubuntu", Serif;
+      font-size: 11pt;
+    }
+
+    /* Full-width top title bar */
+    #topTitle {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 50px;
+      background-color: #C8102E;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18pt;
+      font-weight: bold;
+      z-index: 1000;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      padding: 0 10px;
+      overflow: hidden;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    #topTitle a {
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+      margin-right: 20px;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    #topTitle span.titleText {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 1;
+    }
+
+    @media (max-width: 400px) {
+      #topTitle { font-size: 14pt; }
+    }
+
+    /* Map fills remaining space below title */
+    #map { position:absolute; top:50px; bottom:0; width:100%; }
+
+    .ctl {
+      padding: 2px 10px;
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      border-radius: 5px;
+      text-align: right;
+    }
+
+    .src { font-size: 10pt; }
+    .leaflet-control-layers-overlays label { white-space: nowrap; }
+    .leaflet-control-layers-list { max-height: calc(100vh - 140px); overflow-y: auto; overflow-x: hidden; }
+    .layer-group-head { font-weight: bold; margin: 6px 0 2px; color: #C8102E; }
+  </style>
+</head>
+<body>
+
+  <!-- Full-width top title -->
+  <div id="topTitle">
+    <a href="https://prosperiastate.github.io/">Home</a>
+    <span class="titleText">Project 2: Gravel Road Inspection</span>
+  </div>
+
+  <!-- Map -->
+  <div id="map"></div>
+
+  <script>
+    // ==========================
+    // Base Layers
+    // ==========================
+    var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors',
+      minZoom: 17, maxZoom: 26, maxNativeZoom: 19
+    });
+
+    var white = L.tileLayer(
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEAAQMAAABmvDolAAAAA1BMVEX///+nxBvIAAAAH0lEQVQYGe3BAQ0AAADCIPunfg43YAAAAAAAAAAA5wIhAAAB9aK9BAAAAABJRU5ErkJggg==",
+      {minZoom: 17, maxZoom: 26}
+    );
+
+    var googleSat = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+      maxZoom: 26, maxNativeZoom: 20,
+      subdomains:['mt0','mt1','mt2','mt3'],
+      attribution: 'Map data © Google'
+    });
+
+    var basemaps = {
+      "Open Street Map": osm,
+      "Google": googleSat,
+      "Without background": white
+    };
+
+    // ==========================
+    // Overlay Layers (COGs in S3 bucket drone-cogs-sourav)
+    //   kind: rgba | rgb | hillshade | dem | thermal
+    //   bounds: [[south, west], [north, east]] read from each COG
+    // ==========================
+    // 150 street
+    var RGB_150_40 = L.cogLayer({"label": "150 st RGB (40ft)", "key": "Project_2_Gravel_Road/150_40.tif", "kind": "rgba", "site": "st150", "bounds": [[42.5693902, -91.9619591], [42.5697141, -91.9586591]]});
+    var Hillshade_150_40 = L.cogLayer({"label": "150 st Hillshade (40ft)", "key": "Project_2_Gravel_Road/150_40_Hillshade.tif", "kind": "hillshade", "site": "st150", "bounds": [[42.5693547, -91.9619592], [42.569715, -91.9586585]], "epsg": 6344});
+    var DEM_150_40 = L.cogLayer({"label": "150 st DEM (40ft)", "key": "Project_2_Gravel_Road/150_40_DEM.tif", "kind": "dem", "site": "st150", "bounds": [[42.5693547, -91.9619592], [42.569715, -91.9586585]], "min": 262.27, "max": 265.56, "nodata": -32767});
+    var RGB_150_60 = L.cogLayer({"label": "150 st RGB (60ft)", "key": "Project_2_Gravel_Road/150_60_RGB.tif", "kind": "rgba", "site": "st150", "bounds": [[42.5693451, -91.9619747], [42.5697557, -91.9586865]]});
+    var Hillshade_150_60 = L.cogLayer({"label": "150 st Hillshade (60ft)", "key": "Project_2_Gravel_Road/150_60_Hillshade.tif", "kind": "hillshade", "site": "st150", "bounds": [[42.569345, -91.9619684], [42.5697544, -91.9586877]], "epsg": 6344});
+    var DEM_150_60 = L.cogLayer({"label": "150 st DEM (60ft)", "key": "Project_2_Gravel_Road/150_60_DEM.tif", "kind": "dem", "site": "st150", "bounds": [[42.569345, -91.9619684], [42.5697544, -91.9586877]], "min": 262.14, "max": 265.51, "nodata": -32767});
+
+    // 130 street
+    var RGB_130_40 = L.cogLayer({"label": "130 st RGB (40ft)", "key": "Project_2_Gravel_Road/130_40_RGB.tif", "kind": "rgba", "site": "st130", "bounds": [[42.5989986, -91.9421767], [42.5991764, -91.9412255]]});
+    var Hillshade_130_40 = L.cogLayer({"label": "130 st Hillshade (40ft)", "key": "Project_2_Gravel_Road/130_40_Hillshade.tif", "kind": "hillshade", "site": "st130", "bounds": [[42.5989991, -91.9421763], [42.5991763, -91.9412268]], "epsg": 6344});
+    var DEM_130_40 = L.cogLayer({"label": "130 st DEM (40ft)", "key": "Project_2_Gravel_Road/130_40_DEM.tif", "kind": "dem", "site": "st130", "bounds": [[42.5989991, -91.9421763], [42.5991763, -91.9412268]], "min": 264.56, "max": 265.38, "nodata": -32767});
+
+    var overlaymaps = {
+      "150 st RGB (40ft)": RGB_150_40,
+      "150 st Hillshade (40ft)": Hillshade_150_40,
+      "150 st DEM (40ft)": DEM_150_40,
+      "150 st RGB (60ft)": RGB_150_60,
+      "150 st Hillshade (60ft)": Hillshade_150_60,
+      "150 st DEM (60ft)": DEM_150_60,
+      "130 st RGB (40ft)": RGB_130_40,
+      "130 st Hillshade (40ft)": Hillshade_130_40,
+      "130 st DEM (40ft)": DEM_130_40
+    };
+    var allLayers = [RGB_150_40, Hillshade_150_40, DEM_150_40, RGB_150_60, Hillshade_150_60, DEM_150_60, RGB_130_40, Hillshade_130_40, DEM_130_40];
+
+    // ==========================
+    // Initialize Map
+    // ==========================
+    var map = L.map('map', {
+      center: [42.56956333588926, -91.96026621009074],
+      zoom: 19,
+      minZoom: 17,
+      maxZoom: 26,
+      layers: [osm, RGB_150_40] // Default base + overlay
+    });
+
+    // Toggle button for the layer list
+    var toggleButton = L.control({position: 'topright'});
+    toggleButton.onAdd = function(map) {
+      var div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+      var link = L.DomUtil.create('a', '', div);
+      link.innerHTML = '_';  // menu icon
+      link.href = '#';
+      link.title = 'Toggle layer list';
+
+      L.DomEvent.on(link, 'click', function(e) {
+        L.DomEvent.stop(e);
+        var control = document.querySelector('.leaflet-control-layers');
+        if (control.style.display === 'none') {
+          control.style.display = 'block';
+        } else {
+          control.style.display = 'none';
+        }
+      });
+
+      return div;
+    };
+    toggleButton.addTo(map);
+
+    L.control.layers(basemaps, overlaymaps, {collapsed:false}).addTo(map);
+    L.control.scale({position: 'bottomleft'}).addTo(map);
+
+    // ==========================
+    // Fit Bounds Logic: zoom to a site when one of its layers is switched on
+    // ==========================
+    var siteBounds = L.cogLayer.fitOnSwitch(map, allLayers, 'st150');
+    
+
+    // ==========================
+    // Bottom-left note
+    // ==========================
+    var src = 'Hosted by ISU PROSPER Team';
+    var note = L.control({position: 'bottomleft'});
+    note.onAdd = function(map) {
+      this._div = L.DomUtil.create('div', 'ctl src');
+      this.update();
+      return this._div;
+    };
+    note.update = function() { this._div.innerHTML = src; };
+    note.addTo(map);
+  </script>
+
+</body>
+</html>

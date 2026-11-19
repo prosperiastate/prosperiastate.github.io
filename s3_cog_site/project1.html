@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' />
+  <title>Project 1: Bridge Crack Inspection</title>
+
+  <!-- Leaflet + COG support (georaster reads Cloud Optimized GeoTIFFs straight from S3) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/cog-layers.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+  <script src="https://unpkg.com/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
+  <script src="https://unpkg.com/georaster-layer-for-leaflet@3.10.0/dist/georaster-layer-for-leaflet.min.js"></script>
+  <script src="js/cog-layers.js"></script>
+
+  <style>
+    body { margin:0; padding:0; }
+    body, table, tr, td, th, div, h1, h2, input {
+      font-family: "Calibri", "Trebuchet MS", "Ubuntu", Serif;
+      font-size: 11pt;
+    }
+
+    /* Full-width top title bar */
+    #topTitle {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 50px;
+      background-color: #C8102E;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18pt;
+      font-weight: bold;
+      z-index: 1000;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      padding: 0 10px;
+      overflow: hidden;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    #topTitle a {
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+      margin-right: 20px;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    #topTitle span.titleText {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 1;
+    }
+
+    @media (max-width: 400px) {
+      #topTitle { font-size: 14pt; }
+    }
+
+    /* Map fills remaining space below title */
+    #map { position:absolute; top:50px; bottom:0; width:100%; }
+
+    .ctl {
+      padding: 2px 10px;
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      border-radius: 5px;
+      text-align: right;
+    }
+
+    .src { font-size: 10pt; }
+    .leaflet-control-layers-overlays label { white-space: nowrap; }
+    .leaflet-control-layers-list { max-height: calc(100vh - 140px); overflow-y: auto; overflow-x: hidden; }
+    .layer-group-head { font-weight: bold; margin: 6px 0 2px; color: #C8102E; }
+  </style>
+</head>
+<body>
+
+  <!-- Full-width top title -->
+  <div id="topTitle">
+    <a href="https://prosperiastate.github.io/">Home</a>
+    <span class="titleText">Project 1: Bridge Crack Inspection</span>
+  </div>
+
+  <!-- Map -->
+  <div id="map"></div>
+
+  <script>
+    // ==========================
+    // Base Layers
+    // ==========================
+    var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors',
+      minZoom: 17, maxZoom: 26, maxNativeZoom: 19
+    });
+
+    var white = L.tileLayer(
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEAAQMAAABmvDolAAAAA1BMVEX///+nxBvIAAAAH0lEQVQYGe3BAQ0AAADCIPunfg43YAAAAAAAAAAA5wIhAAAB9aK9BAAAAABJRU5ErkJggg==",
+      {minZoom: 17, maxZoom: 26}
+    );
+
+    var googleSat = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+      maxZoom: 26, maxNativeZoom: 20,
+      subdomains:['mt0','mt1','mt2','mt3'],
+      attribution: 'Map data © Google'
+    });
+
+    var basemaps = {
+      "Open Street Map": osm,
+      "Google": googleSat,
+      "Without background": white
+    };
+
+    // ==========================
+    // Overlay Layers (COGs in S3 bucket drone-cogs-sourav)
+    //   kind: rgba | rgb | hillshade | dem | thermal
+    //   bounds: [[south, west], [north, east]] read from each COG
+    // ==========================
+    // Humboldt bridge
+    var lyr = L.cogLayer({"label": "Humboldt (15ft)", "key": "Project_1_Bridge_Crack/Humboldt/Humboldt_15ft_Sourav_10152024.tif", "kind": "rgba", "site": "humboldt", "bounds": [[42.8588797, -94.2273665], [42.8593421, -94.2271784]]});
+    var lyr2 = L.cogLayer({"label": "Humboldt (40ft)", "key": "Project_1_Bridge_Crack/Humboldt/Humboldt_40ft_Sourav_10152024.tif", "kind": "rgba", "site": "humboldt", "bounds": [[42.8589014, -94.2273673], [42.8593415, -94.2271771]]});
+
+    // NEMM (I-35) bridge
+    var lyr3 = L.cogLayer({"label": "NEMM (15ft) Oct 1, corrected", "key": "Project_1_Bridge_Crack/NEMM/I35_15ft_Oct_1_corrected_Final_sourav_10152024.tif", "kind": "rgba", "site": "nemm", "bounds": [[41.6502171, -93.5802036], [41.6507261, -93.5787561]]});
+    var lyr4 = L.cogLayer({"label": "NEMM (15ft) Oct 3, preliminary (no GCP)", "key": "Project_1_Bridge_Crack/NEMM/I35_15ft_Oct_3_noGCP_preliminary_sourav_10152024.tif", "kind": "rgba", "site": "nemm", "bounds": [[41.6506116, -93.5789074], [41.6519213, -93.5766211]]});
+    var lyr5 = L.cogLayer({"label": "NEMM (35ft) corrected", "key": "Project_1_Bridge_Crack/NEMM/I35_35ft_corrected_Final_sourav_10152024.tif", "kind": "rgba", "site": "nemm", "bounds": [[41.6506095, -93.5789425], [41.651921, -93.5765938]]});
+
+    var overlaymaps = {
+      "Humboldt (15ft)": lyr,
+      "Humboldt (40ft)": lyr2,
+      "NEMM (15ft) Oct 1, corrected": lyr3,
+      "NEMM (15ft) Oct 3, preliminary (no GCP)": lyr4,
+      "NEMM (35ft) corrected": lyr5
+    };
+    var allLayers = [lyr, lyr2, lyr3, lyr4, lyr5];
+
+    // ==========================
+    // Initialize Map
+    // ==========================
+    var map = L.map('map', {
+      center: [42.85911, -94.22727],
+      zoom: 17,
+      minZoom: 17,
+      maxZoom: 26,
+      layers: [osm, lyr] // Default base + overlay
+    });
+
+    // Toggle button for the layer list
+    var toggleButton = L.control({position: 'topright'});
+    toggleButton.onAdd = function(map) {
+      var div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+      var link = L.DomUtil.create('a', '', div);
+      link.innerHTML = '_';  // menu icon
+      link.href = '#';
+      link.title = 'Toggle layer list';
+
+      L.DomEvent.on(link, 'click', function(e) {
+        L.DomEvent.stop(e);
+        var control = document.querySelector('.leaflet-control-layers');
+        if (control.style.display === 'none') {
+          control.style.display = 'block';
+        } else {
+          control.style.display = 'none';
+        }
+      });
+
+      return div;
+    };
+    toggleButton.addTo(map);
+
+    L.control.layers(basemaps, overlaymaps, {collapsed:false}).addTo(map);
+    L.control.scale({position: 'bottomleft'}).addTo(map);
+
+    // ==========================
+    // Fit Bounds Logic: zoom to a site when one of its layers is switched on
+    // ==========================
+    var siteBounds = L.cogLayer.fitOnSwitch(map, allLayers, 'humboldt');
+    map.fitBounds(siteBounds.humboldt, {animate: false});
+
+    // ==========================
+    // Bottom-left note
+    // ==========================
+    var src = 'Hosted by ISU PROSPER Team';
+    var note = L.control({position: 'bottomleft'});
+    note.onAdd = function(map) {
+      this._div = L.DomUtil.create('div', 'ctl src');
+      this.update();
+      return this._div;
+    };
+    note.update = function() { this._div.innerHTML = src; };
+    note.addTo(map);
+  </script>
+
+</body>
+</html>

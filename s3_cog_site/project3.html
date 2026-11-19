@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' />
+  <title>Project 3: Thermal Bridge Inspection</title>
+
+  <!-- Leaflet + COG support (georaster reads Cloud Optimized GeoTIFFs straight from S3) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/cog-layers.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+  <script src="https://unpkg.com/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
+  <script src="https://unpkg.com/georaster-layer-for-leaflet@3.10.0/dist/georaster-layer-for-leaflet.min.js"></script>
+  <script src="js/cog-layers.js"></script>
+
+  <style>
+    body { margin:0; padding:0; }
+    body, table, tr, td, th, div, h1, h2, input {
+      font-family: "Calibri", "Trebuchet MS", "Ubuntu", Serif;
+      font-size: 11pt;
+    }
+
+    /* Full-width top title bar */
+    #topTitle {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 50px;
+      background-color: #C8102E;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18pt;
+      font-weight: bold;
+      z-index: 1000;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      padding: 0 10px;
+      overflow: hidden;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    #topTitle a {
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+      margin-right: 20px;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    #topTitle span.titleText {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 1;
+    }
+
+    @media (max-width: 400px) {
+      #topTitle { font-size: 14pt; }
+    }
+
+    /* Map fills remaining space below title */
+    #map { position:absolute; top:50px; bottom:0; width:100%; }
+
+    .ctl {
+      padding: 2px 10px;
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      border-radius: 5px;
+      text-align: right;
+    }
+
+    .src { font-size: 10pt; }
+    .leaflet-control-layers-overlays label { white-space: nowrap; }
+    .leaflet-control-layers-list { max-height: calc(100vh - 140px); overflow-y: auto; overflow-x: hidden; }
+    .layer-group-head { font-weight: bold; margin: 6px 0 2px; color: #C8102E; }
+  </style>
+</head>
+<body>
+
+  <!-- Full-width top title -->
+  <div id="topTitle">
+    <a href="https://prosperiastate.github.io/">Home</a>
+    <span class="titleText">Project 3: Thermal Bridge Inspection</span>
+  </div>
+
+  <!-- Map -->
+  <div id="map"></div>
+
+  <script>
+    // ==========================
+    // Base Layers
+    // ==========================
+    var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors',
+      minZoom: 17, maxZoom: 26, maxNativeZoom: 19
+    });
+
+    var white = L.tileLayer(
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEAAQMAAABmvDolAAAAA1BMVEX///+nxBvIAAAAH0lEQVQYGe3BAQ0AAADCIPunfg43YAAAAAAAAAAA5wIhAAAB9aK9BAAAAABJRU5ErkJggg==",
+      {minZoom: 17, maxZoom: 26}
+    );
+
+    var googleSat = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+      maxZoom: 26, maxNativeZoom: 20,
+      subdomains:['mt0','mt1','mt2','mt3'],
+      attribution: 'Map data © Google'
+    });
+
+    var basemaps = {
+      "Open Street Map": osm,
+      "Google": googleSat,
+      "Without background": white
+    };
+
+    // ==========================
+    // Overlay Layers (COGs in S3 bucket drone-cogs-sourav)
+    //   kind: rgba | rgb | hillshade | dem | thermal
+    //   bounds: [[south, west], [north, east]] read from each COG
+    // ==========================
+    // Perry bridge, 2025
+    var RGB_40 = L.cogLayer({"label": "RGB (40ft)", "key": "Project_3_Bridge_Thermal/Perry 2025/Perry_40ft_RGB_v2.tif", "kind": "rgba", "site": "perry", "bounds": [[42.5332276, -92.0306758], [42.5333524, -92.0296154]]});
+    var Hill_40 = L.cogLayer({"label": "Hillshade (40ft)", "key": "Project_3_Bridge_Thermal/Perry 2025/Perry_40ft_Hillshade_v2.tif", "kind": "hillshade", "site": "perry", "bounds": [[42.5332276, -92.0306758], [42.5333524, -92.0296154]], "epsg": 6344});
+    var DEM_40 = L.cogLayer({"label": "DEM (40ft)", "key": "Project_3_Bridge_Thermal/Perry 2025/Perry_40ft_DEM_v2.tif", "kind": "dem", "site": "perry", "bounds": [[42.5332276, -92.0306758], [42.5333524, -92.0296154]], "min": 253.23, "max": 254.25, "nodata": -32767});
+    var RGB_60 = L.cogLayer({"label": "RGB (60ft)", "key": "Project_3_Bridge_Thermal/Perry 2025/Perry_60ftRGB_clipped2.tif", "kind": "rgba", "site": "perry", "bounds": [[42.533223, -92.030732], [42.5333622, -92.0295834]], "epsg": 6344});
+    var Hill_60 = L.cogLayer({"label": "Hillshade (60ft)", "key": "Project_3_Bridge_Thermal/Perry 2025/Perry_60ft_Hillshade.tif", "kind": "hillshade", "site": "perry", "bounds": [[42.5331473, -92.0307589], [42.533434, -92.029463]], "epsg": 6344});
+    var DEM_60 = L.cogLayer({"label": "DEM (60ft)", "key": "Project_3_Bridge_Thermal/Perry 2025/Perry_60ft_DEM.tif", "kind": "dem", "site": "perry", "bounds": [[42.5331473, -92.0307589], [42.533434, -92.029463]], "min": 274.86, "max": 285.12, "nodata": -32767});
+
+    // Perry bridge, Aug 2026
+    var P26_RGB = L.cogLayer({"label": "Perry 2026 RGB (Astro)", "key": "Project_3_Bridge_Thermal/Perry 2026/20260819_PerryBridge_HisRes_Astro_Ortho.tif", "kind": "rgb", "site": "perry26", "bounds": [[42.5332428, -92.0287158], [42.5333559, -92.0282008]]});
+    var P26_DEM = L.cogLayer({"label": "Perry 2026 DEM (Astro)", "key": "Project_3_Bridge_Thermal/Perry 2026/20260819_PerryBridge_HisRes_Astro_DEM.tif", "kind": "dem", "site": "perry26", "bounds": [[42.5332428, -92.0287158], [42.5333559, -92.0282008]], "min": 280.53, "max": 284.68, "nodata": -32767});
+    var P26_TH = L.cogLayer({"label": "Perry 2026 Thermal", "key": "Project_3_Bridge_Thermal/Perry 2026/20260819_PerryBridge_Thermal.tif", "kind": "thermal", "site": "perry26", "bounds": [[42.5332434, -92.0287942], [42.5333605, -92.0281136]], "min": 24.83, "max": 39.16, "nodata": 0});
+
+    // Virginia bridge, Aug 2026
+    var VA_RGB = L.cogLayer({"label": "Virginia RGB (Astro)", "key": "Project_3_Bridge_Thermal/Virginia_Bridge/20260818_VirginiaBridge_HisRes_Astro_Ortho.tif", "kind": "rgb", "site": "virginia", "bounds": [[41.2204413, -93.7357298], [41.22056, -93.7349252]]});
+    var VA_DEM = L.cogLayer({"label": "Virginia DEM (Astro)", "key": "Project_3_Bridge_Thermal/Virginia_Bridge/20260818_VirginiaBridge_HisRes_Astro_DEM.tif", "kind": "dem", "site": "virginia", "bounds": [[41.2204413, -93.7357298], [41.22056, -93.7349252]], "min": 267.1, "max": 279.49, "nodata": -32767});
+
+    // West bridge, Aug 2026
+    var WB_RGB = L.cogLayer({"label": "West Bridge RGB (Astro)", "key": "Project_3_Bridge_Thermal/West Bridge/20260819_WestBridge_HisRes_Astro_Ortho.tif", "kind": "rgb", "site": "west", "bounds": [[42.3856989, -92.055123], [42.3859382, -92.0549838]]});
+    var WB_DEM = L.cogLayer({"label": "West Bridge DEM (Astro)", "key": "Project_3_Bridge_Thermal/West Bridge/20260819_WestBridge_HisRes_Astro_DEM.tif", "kind": "dem", "site": "west", "bounds": [[42.3856989, -92.055123], [42.3859382, -92.0549838]], "min": 264.83, "max": 267.47, "nodata": -32767});
+    var WB_TH = L.cogLayer({"label": "West Bridge Thermal", "key": "Project_3_Bridge_Thermal/West Bridge/20260819_WestBridge_Thermal.tif", "kind": "thermal", "site": "west", "bounds": [[42.3857028, -92.0551261], [42.385933, -92.0550165]], "min": 28.54, "max": 50.46, "nodata": 0});
+
+    var overlaymaps = {
+      "RGB (40ft)": RGB_40,
+      "Hillshade (40ft)": Hill_40,
+      "DEM (40ft)": DEM_40,
+      "RGB (60ft)": RGB_60,
+      "Hillshade (60ft)": Hill_60,
+      "DEM (60ft)": DEM_60,
+      "Perry 2026 RGB (Astro)": P26_RGB,
+      "Perry 2026 DEM (Astro)": P26_DEM,
+      "Perry 2026 Thermal": P26_TH,
+      "Virginia RGB (Astro)": VA_RGB,
+      "Virginia DEM (Astro)": VA_DEM,
+      "West Bridge RGB (Astro)": WB_RGB,
+      "West Bridge DEM (Astro)": WB_DEM,
+      "West Bridge Thermal": WB_TH
+    };
+    var allLayers = [RGB_40, Hill_40, DEM_40, RGB_60, Hill_60, DEM_60, P26_RGB, P26_DEM, P26_TH, VA_RGB, VA_DEM, WB_RGB, WB_DEM, WB_TH];
+
+    // ==========================
+    // Initialize Map
+    // ==========================
+    var map = L.map('map', {
+      center: [42.53329001196472, -92.03014560391935],
+      zoom: 20,
+      minZoom: 17,
+      maxZoom: 26,
+      layers: [osm, RGB_40] // Default base + overlay
+    });
+
+    // Toggle button for the layer list
+    var toggleButton = L.control({position: 'topright'});
+    toggleButton.onAdd = function(map) {
+      var div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+      var link = L.DomUtil.create('a', '', div);
+      link.innerHTML = '_';  // menu icon
+      link.href = '#';
+      link.title = 'Toggle layer list';
+
+      L.DomEvent.on(link, 'click', function(e) {
+        L.DomEvent.stop(e);
+        var control = document.querySelector('.leaflet-control-layers');
+        if (control.style.display === 'none') {
+          control.style.display = 'block';
+        } else {
+          control.style.display = 'none';
+        }
+      });
+
+      return div;
+    };
+    toggleButton.addTo(map);
+
+    L.control.layers(basemaps, overlaymaps, {collapsed:false}).addTo(map);
+    L.control.scale({position: 'bottomleft'}).addTo(map);
+
+    // ==========================
+    // Fit Bounds Logic: zoom to a site when one of its layers is switched on
+    // ==========================
+    var siteBounds = L.cogLayer.fitOnSwitch(map, allLayers, 'perry');
+    
+
+    // ==========================
+    // Bottom-left note
+    // ==========================
+    var src = 'Hosted by ISU PROSPER Team';
+    var note = L.control({position: 'bottomleft'});
+    note.onAdd = function(map) {
+      this._div = L.DomUtil.create('div', 'ctl src');
+      this.update();
+      return this._div;
+    };
+    note.update = function() { this._div.innerHTML = src; };
+    note.addTo(map);
+  </script>
+
+</body>
+</html>

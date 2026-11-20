@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>County Data | IowaPavementData.com</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="county">
+
+<div class="hero page-hero" style="background-image:url('assets/img/vlcsnap-2023-11-08-15h22m08s964.jpg');background-position:center 40%">
+  <div class="wrap">
+    <span class="eyebrow" id="eyebrow">County view</span>
+    <h1 id="countyTitle">Select a county</h1>
+    <div class="selector-bar" style="margin-top:14px">
+      <select id="countySelect" aria-label="Select county"><option value="">Select county&hellip;</option></select>
+    </div>
+  </div>
+</div>
+
+<div id="noCounty" class="wrap" style="display:none;padding:50px 20px">
+  <div class="card" style="text-align:center;padding:40px">
+    <h2>Pick a county to begin</h2>
+    <p class="muted">Use the selector above to open any of Iowa's 99 counties. Lee and Clinton are the pilot counties.</p>
+    <div class="btn-row" style="justify-content:center">
+      <a class="btn btn-dark" href="county.html?id=56">Lee County</a>
+      <a class="btn btn-dark" href="county.html?id=23">Clinton County</a>
+    </div>
+  </div>
+</div>
+
+<main id="countyMain" style="display:none">
+  <div class="wrap"><div class="kpis" id="kpis"></div></div>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <h2>County data</h2>
+          <p class="muted">Pavement segments on the state-maintained network in this county. Choose a data group to color the map.</p>
+        </div>
+      </div>
+      <div class="tabs" id="tabs"></div>
+      <div class="split">
+        <div id="countyMap" class="map"></div>
+        <div class="card panel" id="panel"></div>
+      </div>
+      <div class="grid grid-2" style="margin-top:18px">
+        <div class="card" style="opacity:.8">
+          <h3 style="font-size:1.05rem">CyRoads / SmartBox <span class="tag-soon">Coming soon</span></h3>
+          <p class="muted small" style="margin:0">Treatment and maintenance records from CyRoads / SmartBox will be linked to each segment here once available.</p>
+        </div>
+        <div class="card" style="opacity:.8">
+          <h3 style="font-size:1.05rem">IPMP <span class="tag-soon">Coming soon</span></h3>
+          <p class="muted small" style="margin:0">Iowa Pavement Management Program distress and condition history will appear here.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Demo model</span>
+          <h2>AI model for RSL / IRI prediction</h2>
+          <p class="muted">A simple linear regression trained on all Iowa segments, using construction, traffic and climate inputs to predict IRI. Future IRI is projected by aging the pavement and growing traffic 1.5% per year.</p>
+        </div>
+        <div class="selector-bar">
+          <label for="predYear" style="margin:0">Show on map</label>
+          <select id="predYear"></select>
+        </div>
+      </div>
+      <div class="model-grid">
+        <div>
+          <div id="predMap" class="map" style="height:380px"></div>
+          <div class="grid grid-3" id="predSummary" style="margin-top:14px"></div>
+        </div>
+        <div class="card">
+          <h3>Try the model</h3>
+          <p class="muted small">Sliders start at this county's median values.</p>
+          <div id="sliders"></div>
+          <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap">
+            <div class="big-pred" id="predOut">–</div><div class="muted">in/mi predicted IRI</div><span id="predPill"></span>
+          </div>
+          <div class="equation" id="equation" style="margin-top:14px"></div>
+          <p class="placeholder-note" style="margin-top:12px" id="modelNote"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <div><h2>Segment table</h2><p class="muted">Click a column header to sort. Click a row to find it on the map.</p></div>
+      </div>
+      <div class="table-wrap"><table id="segTable"></table></div>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="data/counties.js"></script>
+<script src="data/stations.js"></script>
+<script src="data/model.js"></script>
+<script src="assets/common.js"></script>
+<script src="assets/county.js"></script>
+</body>
+</html>

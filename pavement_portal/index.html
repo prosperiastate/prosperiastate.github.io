@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IowaPavementData.com</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="home">
+
+<div class="hero" style="background-image:url('assets/img/DJI_0610.jpg')">
+  <div class="wrap">
+    <span class="eyebrow">IHRB-4415 &middot; County Pavement Preservation</span>
+    <h1>One place for Iowa county pavement data</h1>
+    <p>Construction, performance, traffic and climate data for county roads, brought together to track how preservation treatments perform and to predict future roughness (IRI) and remaining service life.</p>
+    <div class="btn-row">
+      <a class="btn btn-primary" href="#counties">Explore a county</a>
+      <a class="btn btn-ghost" href="upload.html">Upload your data</a>
+    </div>
+  </div>
+</div>
+
+<section id="counties">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <h2>Pilot counties</h2>
+        <p class="muted">Lee and Clinton counties are the first counties on the portal. Any other Iowa county can be opened from the selector.</p>
+      </div>
+    </div>
+    <div class="grid grid-4" id="countyCards"></div>
+  </div>
+</section>
+
+<section style="background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <h2>How the data fits together</h2>
+        <p class="muted">Each county view combines four data groups. Together with treatment records (CyRoads / SmartBox and IPMP, coming later) they feed the prediction model.</p>
+      </div>
+    </div>
+    <div class="flow">
+      <div class="flow-group">
+        <div class="flow-item"><span class="dot" style="background:#7b5ea7"></span><div>Construction data<small>Surface thickness, construction year</small></div></div>
+        <div class="flow-item"><span class="dot" style="background:#2e8b57"></span><div>Performance data<small>International Roughness Index (IRI)</small></div></div>
+        <div class="flow-item"><span class="dot" style="background:#2f6fb0"></span><div>Traffic data<small>Annual average daily traffic (AADT)</small></div></div>
+        <div class="flow-item"><span class="dot" style="background:#1d9bb5"></span><div>Climate data<small>Freeze-thaw cycles per year</small></div></div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-group alt">
+        <div class="flow-item">CyRoads / SmartBox<span class="tag-soon">Coming soon</span></div>
+        <div class="flow-item">IPMP<span class="tag-soon">Coming soon</span></div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-model">AI model for RSL / IRI prediction<small>Demo: linear regression on all four data groups</small></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <h2>Statewide view</h2>
+        <p class="muted">Average measured IRI of the pavement segments in each county. Click a county to open it.</p>
+      </div>
+      <div class="selector-bar">
+        <label for="stateLayer" style="margin:0">Color by</label>
+        <select id="stateLayer">
+          <option value="iri">Average IRI (in/mi)</option>
+          <option value="ft">Freeze-thaw cycles per year</option>
+        </select>
+      </div>
+    </div>
+    <div id="stateMap" class="map"></div>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="photos">
+      <img src="assets/img/vlcsnap-2023-11-08-15h22m08s964.jpg" alt="Chip seal application on a rural Iowa county road">
+      <img src="assets/img/DJI_0977.jpg" alt="Aerial view of a preservation treatment crew on a cracked concrete road">
+      <img src="assets/img/DJI_0060.jpg" alt="Thermal and color drone images of a treatment being placed">
+    </div>
+  </div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="data/counties.js"></script>
+<script src="assets/common.js"></script>
+<script>
+  // county cards
+  const byId = Object.fromEntries(COUNTIES.list.map((c) => [c.id, c]));
+  const card = (c) => `
+    <a class="card county-card" href="county.html?id=${c.id}">
+      <span class="muted small">Pilot county</span>
+      <h3>${c.name} County</h3>
+      <div class="stats">
+        <div><b>${c.n}</b><span class="muted small">segments</span></div>
+        <div><b>${IPD.fmt(c.iri, 0)}</b><span class="muted small">avg IRI</span></div>
+        <div><b>${IPD.fmt(c.ft, 0)}</b><span class="muted small">F-T cycles/yr</span></div>
+      </div>
+      <span class="go">Open county &rarr;</span>
+    </a>`;
+  document.getElementById("countyCards").innerHTML =
+    card(byId[56]) + card(byId[23]) + `
+    <div class="card county-card">
+      <span class="muted small">All 99 counties</span>
+      <h3>Other County</h3>
+      <p class="muted small" style="margin:6px 0 12px">Pick any Iowa county to see its data.</p>
+      <select id="otherCounty"><option value="">Select county&hellip;</option></select>
+      <button class="btn btn-dark" id="goCounty" style="margin-top:12px" disabled>Open county &rarr;</button>
+    </div>
+    <a class="card county-card upload" href="upload.html">
+      <span class="muted small">Contribute</span>
+      <h3>Upload Your Data</h3>
+      <p class="muted small" style="margin:6px 0 12px">Share construction records, distress surveys, traffic counts or treatment files for your county.</p>
+      <span class="go">Go to upload &rarr;</span>
+    </a>`;
+  const sel = document.getElementById("otherCounty"), go = document.getElementById("goCounty");
+  IPD.countyOptions(sel);
+  sel.onchange = () => (go.disabled = !sel.value);
+  go.onclick = () => (location.href = "county.html?id=" + sel.value);
+
+  // statewide map
+  const map = L.map("stateMap", { scrollWheelZoom: false });
+  IPD.basemap(map);
+  const iriVals = COUNTIES.list.map((c) => c.iri).filter((v) => v != null);
+  const ftVals = COUNTIES.list.map((c) => c.ft);
+  const rng = (a) => [Math.min(...a), Math.max(...a)];
+  const RAMPS = { iri: ["#fff1c9", "#f2a65a", "#c0392b", "#6e1222"], ft: ["#e8f4fa", "#8cc5e3", "#2f6fb0", "#123c69"] };
+  let layerKey = "iri";
+  const colorFor = (c) => {
+    const v = c[layerKey]; if (v == null) return "#ccc";
+    const [lo, hi] = rng(layerKey === "iri" ? iriVals : ftVals);
+    return IPD.ramp((v - lo) / (hi - lo), RAMPS[layerKey]);
+  };
+  const geo = L.geoJSON(COUNTIES.geo, {
+    style: (f) => ({ color: "#fff", weight: 1, fillOpacity: .85, fillColor: colorFor(byId[f.properties.IADOMID]) }),
+    onEachFeature: (f, l) => {
+      const c = byId[f.properties.IADOMID];
+      l.bindTooltip(`<b>${c.name} County</b><br>Avg IRI: ${IPD.fmt(c.iri, 0)} in/mi (${c.n} segments)<br>Freeze-thaw: ${IPD.fmt(c.ft, 1)} cycles/yr`, { sticky: true });
+      l.on({ click: () => (location.href = "county.html?id=" + c.id),
+             mouseover: () => l.setStyle({ weight: 3, color: "#222" }), mouseout: () => geo.resetStyle(l) });
+    },
+  }).addTo(map);
+  IPD.fit(map, geo.getBounds());
+
+  const legend = L.control({ position: "bottomright" });
+  legend.onAdd = () => (legend._div = L.DomUtil.create("div", "legend"));
+  legend.addTo(map);
+  function drawLegend() {
+    const [lo, hi] = rng(layerKey === "iri" ? iriVals : ftVals);
+    const title = layerKey === "iri" ? "Avg IRI (in/mi)" : "Freeze-thaw cycles/yr";
+    legend._div.innerHTML = `<b>${title}</b><br>` + [0, .33, .66, 1].map((t) =>
+      `<i class="sq" style="background:${IPD.ramp(t, RAMPS[layerKey])}"></i>${IPD.fmt(lo + t * (hi - lo), 0)}`).join("<br>");
+  }
+  drawLegend();
+  document.getElementById("stateLayer").onchange = (e) => { layerKey = e.target.value; geo.setStyle((f) => ({ fillColor: colorFor(byId[f.properties.IADOMID]) })); drawLegend(); };
+</script>
+</body>
+</html>

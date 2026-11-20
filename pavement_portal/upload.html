@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Upload Your Data | IowaPavementData.com</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="upload">
+
+<div class="hero page-hero" style="background-image:url('assets/img/DJI_0977.jpg');background-position:center 45%">
+  <div class="wrap">
+    <span class="eyebrow" style="background:#d9ccff;color:#3a1a9a">Contribute</span>
+    <h1>Upload your data</h1>
+    <p>Share your county's pavement records so they can be added to the portal and used to improve the prediction model.</p>
+  </div>
+</div>
+
+<section>
+  <div class="wrap" style="max-width:860px">
+    <div class="card" style="padding:28px">
+      <div class="grid grid-2" style="margin-bottom:18px">
+        <div>
+          <label for="county">County <span style="color:var(--poor)">*</span></label>
+          <select id="county" required><option value="">Select county&hellip;</option></select>
+        </div>
+        <div>
+          <label for="dtype">Data type <span style="color:var(--poor)">*</span></label>
+          <select id="dtype" required>
+            <option value="">Select data type&hellip;</option>
+            <option value="construction">Construction data (thickness, layers, build year)</option>
+            <option value="performance">Performance data (IRI, distress, PCI)</option>
+            <option value="traffic">Traffic data (AADT, truck counts)</option>
+            <option value="climate">Climate data</option>
+            <option value="treatment">Treatment / maintenance records</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-2" style="margin-bottom:18px">
+        <div><label for="name">Your name</label><input type="text" id="name" placeholder="Optional"></div>
+        <div><label for="email">Email</label><input type="email" id="email" placeholder="Optional, for follow-up"></div>
+      </div>
+      <div style="margin-bottom:18px">
+        <label for="notes">Notes</label>
+        <textarea id="notes" rows="2" placeholder="Optional: what the files contain, years covered, etc."></textarea>
+      </div>
+
+      <div class="dropzone disabled" id="drop" tabindex="0">
+        <div class="icon">&#128228;</div>
+        <div style="font-weight:700;font-size:1.1rem" id="dropTitle">Select a county and data type first</div>
+        <div class="muted small">Drag and drop files here, or click to browse. Shapefiles (zip), CSV, Excel, PDF and images are welcome.</div>
+        <input type="file" id="fileInput" multiple hidden>
+      </div>
+      <ul class="file-list" id="fileList"></ul>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn btn-upload" id="submit" disabled>Submit files</button>
+      </div>
+      <div class="status" id="status"></div>
+    </div>
+    <p class="muted small" style="margin-top:14px">Files are saved to the project's <code>uploads/&lt;county&gt;/&lt;data type&gt;/</code> folder when the site is run with <code>server.py</code>. Opening this page directly from disk only previews the selection.</p>
+  </div>
+</section>
+
+<script src="data/counties.js"></script>
+<script src="assets/common.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  IPD.countyOptions($("county"), new URLSearchParams(location.search).get("county"));
+  let files = [];
+  const ready = () => $("county").value && $("dtype").value;
+  function refresh() {
+    const ok = ready();
+    $("drop").classList.toggle("disabled", !ok);
+    $("dropTitle").textContent = ok ? "Drop files here or click to browse" : "Select a county and data type first";
+    $("fileList").innerHTML = files.map((f, i) => `<li><span>&#128196; ${f.name} <span class="muted small">(${(f.size / 1024).toFixed(0)} KB)</span></span><button data-i="${i}" title="Remove">&times;</button></li>`).join("");
+    $("submit").disabled = !(ok && files.length);
+  }
+  $("county").onchange = $("dtype").onchange = refresh;
+  $("fileList").onclick = (e) => { const b = e.target.closest("button"); if (b) { files.splice(+b.dataset.i, 1); refresh(); } };
+  const add = (list) => { if (!ready()) return; files.push(...list); refresh(); };
+  $("drop").onclick = () => ready() && $("fileInput").click();
+  $("drop").onkeydown = (e) => (e.key === "Enter" || e.key === " ") && $("drop").click();
+  $("fileInput").onchange = (e) => { add([...e.target.files]); e.target.value = ""; };
+  ["dragenter", "dragover"].forEach((ev) => $("drop").addEventListener(ev, (e) => { e.preventDefault(); if (ready()) $("drop").classList.add("over"); }));
+  ["dragleave", "drop"].forEach((ev) => $("drop").addEventListener(ev, (e) => { e.preventDefault(); $("drop").classList.remove("over"); }));
+  $("drop").addEventListener("drop", (e) => add([...e.dataTransfer.files]));
+
+  function status(msg, ok) { const s = $("status"); s.className = "status " + (ok ? "ok" : "err"); s.innerHTML = msg; }
+  $("submit").onclick = async () => {
+    const countyName = $("county").options[$("county").selectedIndex].text;
+    if (location.protocol === "file:") {
+      status(`Preview only: ${files.length} file(s) for <b>${countyName}</b> / <b>${$("dtype").value}</b> would be uploaded. Run <code>python server.py</code> and open <code>http://localhost:8000/upload.html</code> to save files.`, false);
+      return;
+    }
+    $("submit").disabled = true;
+    try {
+      for (const f of files) {
+        const r = await fetch("/api/upload", {
+          method: "POST", body: f,
+          headers: {
+            "X-County": countyName.replace(/ County$/, ""), "X-Data-Type": $("dtype").value,
+            "X-Filename": encodeURIComponent(f.name), "X-Uploader": encodeURIComponent($("name").value),
+            "X-Email": encodeURIComponent($("email").value), "X-Notes": encodeURIComponent($("notes").value),
+          },
+        });
+        if (!r.ok) throw new Error(await r.text());
+      }
+      status(`Thank you! ${files.length} file(s) uploaded for <b>${countyName}</b> (${$("dtype").value}).`, true);
+      files = []; refresh();
+    } catch (err) {
+      status("Upload failed: " + err.message, false);
+      $("submit").disabled = false;
+    }
+  };
+  refresh();
+</script>
+</body>
+</html>
